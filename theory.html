@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Разширена теория – тръбна задръжка</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #122033;
+      --muted: #4b5d76;
+      --accent: #2563eb;
+      --border: #d9e2ef;
+      --title: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .topbar {
+      background: linear-gradient(120deg, #0f172a, #1d4ed8);
+      color: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .topbar h1 {
+      margin: 0 0 8px;
+      font-size: 27px;
+    }
+
+    .topbar p {
+      margin: 0;
+      opacity: 0.92;
+      line-height: 1.5;
+    }
+
+    .actions { margin-top: 12px; }
+
+    .btn-link {
+      display: inline-block;
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 9px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      color: var(--title);
+      font-size: 19px;
+    }
+
+    h3 {
+      margin: 12px 0 8px;
+      color: #153b73;
+      font-size: 15px;
+    }
+
+    p, li {
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .math {
+      padding: 10px;
+      border: 1px dashed #cfe0ff;
+      border-radius: 10px;
+      background: #fbfdff;
+      margin: 8px 0;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e6edf9;
+      text-align: left;
+      padding: 8px 9px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f4f8ff;
+      color: #1d3557;
+      font-weight: 700;
+    }
+
+    .note {
+      font-size: 13px;
+      color: var(--muted);
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .eq-block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfdff;
+      margin: 8px 0;
+    }
+
+    .eq-title {
+      font-size: 13px;
+      color: #173a73;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .eq-line {
+      margin: 6px 0;
+      overflow-x: auto;
+    }
+
+    .eq-meta {
+      margin-top: 8px;
+      border-top: 1px dashed #dbe6f7;
+      padding-top: 8px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      font-family: "KaTeX_Main", "Times New Roman", serif;
+    }
+
+    .eq-meta-title {
+      font-weight: 700;
+      color: #1f3b66;
+      margin-bottom: 4px;
+    }
+
+    .chip {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 6px;
+      margin-bottom: 4px;
+      border: 1px solid transparent;
+      font-family: "KaTeX_Main", "Times New Roman", serif;
+    }
+
+    .chip-ok {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+
+    .chip-warn {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fcd34d;
+    }
+
+    .chip-out {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+
+    .chip-info {
+      background: #dbeafe;
+      color: #1e3a8a;
+      border-color: #93c5fd;
+    }
+
+    .chip .katex {
+      font-size: 1em;
+    }
+
+    .symbol-box {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .symbol-box ul {
+      margin: 6px 0 0;
+      padding-left: 18px;
+    }
+
+    .range-box {
+      margin-top: 8px;
+      border: 1px dashed #cfe0ff;
+      border-radius: 10px;
+      background: #fcfdff;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>Разширена теория и формули</h1>
+      <p>Страница с пълни уравнения, дефиниции на символите и инженерен контекст за калкулатора на тръбна задръжка.</p>
+      <div class="actions">
+        <a class="btn-link" href="index.html">Обратно към калкулатора</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>0) Формули със заместени текущи стойности</h2>
+      <p>Тук се използват последно изчислените данни от калкулатора. Натисни <b>Изчисли</b> в първата страница и после отвори тази.</p>
+      <div id="liveFormulaStatus" class="note">Зареждане на данни...</div>
+      <div id="liveFormulas"></div>
+    </div>
+
+    <div class="card">
+      <h2>1) Баланс на дебит, обем и време на задръжка</h2>
+      <p>Основата на изчислението е връзката между обемен дебит, време и необходим обем за престой в серпентината.</p>
+
+      <div class="math">$$Q_{L/s} = \frac{\dot V_L}{3600} \quad [L/s]$$</div>
+      <div class="math">$$Q = \frac{Q_{L/s}}{1000} = \frac{\dot V_L}{1000 \cdot 3600} \quad [m^3/s]$$</div>
+      <div class="math">$$V = Q \cdot t$$</div>
+      <div class="math">$$A = \frac{\pi D_i^2}{4}$$</div>
+      <div class="math">$$L = \frac{V}{A}$$</div>
+      <div class="math">$$V_{1m} = A \cdot 1m \quad [m^3/m]$$</div>
+      <div class="math">$$V_{1m,L} = 1000 \cdot V_{1m} \quad [L/m]$$</div>
+
+      <div class="symbol-box">
+        <b>Символи в тези формули</b>
+        <ul>
+          <li>\(\dot V_L\) – входен дебит в \(L/h\)</li>
+          <li>\(Q_{L/s}\) – дебит в \(L/s\), междинна стъпка</li>
+          <li>\(Q\) – дебит в \(m^3/s\), използван в хидравликата</li>
+          <li>\(t\) – време на задръжка \([s]\)</li>
+          <li>\(V\) – необходим обем за задръжка \([m^3]\)</li>
+          <li>\(D_i\) – светъл отвор на тръбата \([m]\)</li>
+          <li>\(A\) – площ на напречно сечение \([m^2]\)</li>
+          <li>\(L\) – дължина на задръжката \([m]\)</li>
+          <li>\(V_{1m,L}\) – обем в 1 m тръба \([L/m]\)</li>
+        </ul>
+      </div>
+
+      <h3>Смисъл</h3>
+      <ul>
+        <li>Колкото по-малък е светлият отвор \(D_i\), толкова по-къса тръба е нужна за същия обем, но растат загубите и скоростта.</li>
+        <li>\(V_{1m}\) показва „литри в 1 m тръба“ и е удобен за технологично оразмеряване.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>2) Скорост и режим на течението</h2>
+
+      <div class="math">$$v = \frac{Q}{A}$$</div>
+      <div class="math">$$Re = \frac{\rho v D_i}{\mu}$$</div>
+      <div class="math">$$\mu_{Pa\cdot s} = \frac{\mu_{mPa\cdot s}}{1000}$$</div>
+
+      <div class="symbol-box">
+        <b>Символи в тези формули</b>
+        <ul>
+          <li>\(v\) – средна скорост на флуида \([m/s]\)</li>
+          <li>\(\rho\) – плътност \([kg/m^3]\)</li>
+          <li>\(D_i\) – вътрешен диаметър \([m]\)</li>
+          <li>\(\mu\) – динамичен вискозитет \([Pa\cdot s]\)</li>
+          <li>\(Re\) – число на Reynolds (безразмерно)</li>
+        </ul>
+      </div>
+
+      <h3>Критерий по Reynolds</h3>
+      <ul>
+        <li>Ламинарен режим: \(Re &lt; 2300\)</li>
+        <li>Преходен режим: \(2300 \le Re \le 4000\)</li>
+        <li>Турбулентен режим: \(Re &gt; 4000\)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3) Хидравлично съпротивление и пад на налягане</h2>
+
+      <h3>3.1 Darcy фактор на триене \(f\)</h3>
+      <div class="math">$$f = \frac{64}{Re} \quad (Re &lt; 2300)$$</div>
+      <div class="math">$$f = \frac{0.25}{\left[\log_{10}\left(\frac{\varepsilon}{3.7D_i}+\frac{5.74}{Re^{0.9}}\right)\right]^2} \quad (Re &gt; 4000)$$</div>
+      <div class="math">$$f_{tr} = f_{lam} + \alpha(f_{turb}-f_{lam}), \quad \alpha=\frac{Re-2300}{1700} \quad (2300 \le Re \le 4000)$$</div>
+
+      <h3>3.2 Локални съпротивления</h3>
+      <div class="math">$$\Sigma K = n_{elbow} \cdot K_{90} + K_{in/out}$$</div>
+
+      <h3>3.3 Общо уравнение за пад на налягане</h3>
+      <div class="math">$$\Delta p = \left(f\frac{L}{D_i} + \Sigma K\right)\frac{\rho v^2}{2}$$</div>
+      <div class="math">$$\Delta p_{bar} = \frac{\Delta p_{Pa}}{100000}$$</div>
+
+      <div class="symbol-box">
+        <b>Символи в тези формули</b>
+        <ul>
+          <li>\(f\) – Darcy коефициент на триене</li>
+          <li>\(\varepsilon\) – абсолютна грапавост \([m]\)</li>
+          <li>\(\Sigma K\) – сума на локалните коефициенти</li>
+          <li>\(n_{elbow}\) – брой колена 90°</li>
+          <li>\(K_{90}\) – коефициент на едно коляно 90°</li>
+          <li>\(K_{in/out}\) – общ коефициент вход/изход</li>
+          <li>\(\Delta p\) – пад на налягане \([Pa], [kPa], [bar]\)</li>
+        </ul>
+      </div>
+
+      <div class="range-box">
+        <b>Диапазони на коефициенти и защо варират</b>
+        <ul>
+          <li>\(K_{90}\): типично ~0.3 до 1.5 (в калкулатора 0.10–2.00). Варира според радиус \(R/D\), технология на коляното (гладко/сегментно), заварка и повърхност.</li>
+          <li>\(\varepsilon\): за неръждаеми санитарни тръби обикновено много ниска; в калкулатора 0.0005–0.1000 mm за покриване на реални/влошени състояния.</li>
+          <li>\((L/D)_{elbow}\): типично ~20–60 за 90° колена (в калкулатора 5–120). Зависи от геометрията и избрания справочник.</li>
+          <li>\(K_{in/out}\): зависи от геометрията на вход/изход (остър, плавен, редуктор, арматура) и затова не е универсална константа.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        При избора на помпа обикновено се добавя резерв към пресметнатия пад на налягане според фирмената практика и общите загуби в цялата линия.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4) CIP критерий за скорост</h2>
+      <p>За измиване на линии в хранително-вкусова промишленост често се използва целеви диапазон скорост приблизително \(1.5\) до \(2.5\,m/s\) (проектно задаван от технолог).</p>
+      <div class="math">$$v_{CIP,min} \le v \le v_{CIP,max}$$</div>
+      <p>В калкулатора този диапазон е потребителски вход и служи за оценка и препоръка на DN.</p>
+
+      <div class="symbol-box">
+        <b>Символи в тази проверка</b>
+        <ul>
+          <li>\(v_{CIP,min}\), \(v_{CIP,max}\) – проектно зададен диапазон за измиване</li>
+          <li>\(v\) – изчислената работна скорост за избрания DN</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5) Обобщена таблица на символите</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Символ</th>
+            <th>Означение</th>
+            <th>Единица</th>
+            <th>Откъде идва</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>\(Q\)</td><td>Обемен дебит</td><td>L/h, L/s, m³/s</td><td>Входът е в L/h, вътрешно се ползва m³/s</td></tr>
+          <tr><td>\(t\)</td><td>Време на задръжка</td><td>s</td><td>Технологично изискване</td></tr>
+          <tr><td>\(V\)</td><td>Необходим обем за задръжка</td><td>m³</td><td>От \(V = Qt\)</td></tr>
+          <tr><td>\(D_i\)</td><td>Светъл отвор (вътрешен диаметър)</td><td>m или mm</td><td>От размерите на тръбата: \(OD - 2s\)</td></tr>
+          <tr><td>\(A\)</td><td>Площ на напречно сечение</td><td>m²</td><td>Геометрия на кръг: \(\pi D_i^2/4\)</td></tr>
+          <tr><td>\(L\)</td><td>Обща дължина на серпентината</td><td>m</td><td>От \(L=V/A\)</td></tr>
+          <tr><td>\(\rho\)</td><td>Плътност на течността</td><td>kg/m³</td><td>Продуктова база или ръчен вход</td></tr>
+          <tr><td>\(\mu\)</td><td>Динамичен вискозитет</td><td>Pa·s</td><td>Продуктова база или ръчен вход</td></tr>
+          <tr><td>\(Re\)</td><td>Число на Reynolds</td><td>-</td><td>Критерий за режим на течението</td></tr>
+          <tr><td>\(\varepsilon\)</td><td>Абсолютна грапавост</td><td>m</td><td>Материал/състояние на тръбата</td></tr>
+          <tr><td>\(f\)</td><td>Darcy коефициент на триене</td><td>-</td><td>Ламинарно или Swamee-Jain</td></tr>
+          <tr><td>\(K_{90}\)</td><td>Локален коефициент на 90° коляно</td><td>-</td><td>Фитинг данни/каталог</td></tr>
+          <tr><td>\(\Sigma K\)</td><td>Сума локални съпротивления</td><td>-</td><td>Сума от всички локални елементи</td></tr>
+          <tr><td>\(\Delta p\)</td><td>Пад на налягане</td><td>Pa, kPa, bar</td><td>Darcy–Weisbach + локални загуби</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>6) Инженерни бележки за приложимост</h2>
+      <ul>
+        <li>Моделът приема Нютоново поведение на течността и постоянни свойства по дължината.</li>
+        <li>За силно вискозни, температурно-зависими или неньютонови продукти е нужна допълнителна корекция.</li>
+        <li>Профилът DN-1/DN/DN+1 е за бърз инженерен подбор; финалният избор включва и останалата тръбна мрежа.</li>
+      </ul>
+      <div class="note">Тази страница е образователно-разяснителна и е съгласувана с формулите, използвани в калкулатора.</div>
+    </div>
+  </div>
+
+  <script>
+    function nf(v, d = 3) {
+      return Number(v).toLocaleString("bg-BG", { maximumFractionDigits: d, minimumFractionDigits: d });
+    }
+
+    function renderLatex(el, latex, displayMode = true) {
+      katex.render(latex, el, { throwOnError: false, displayMode });
+    }
+
+    function renderInlineLatex(el, latex) {
+      katex.render(latex, el, { throwOnError: false, displayMode: false });
+    }
+
+    function statusClassByRange(value, min, max) {
+      if (!Number.isFinite(value)) return "chip-out";
+      if (value < min || value > max) return "chip-out";
+      const span = max - min;
+      const lowWarn = min + 0.15 * span;
+      const highWarn = max - 0.15 * span;
+      if (value < lowWarn || value > highWarn) return "chip-warn";
+      return "chip-ok";
+    }
+
+    function addEq(container, title, templateLatex, substitutedLatex, meta = {}) {
+      const block = document.createElement("div");
+      block.className = "eq-block";
+
+      const h = document.createElement("div");
+      h.className = "eq-title";
+      h.textContent = title;
+      block.appendChild(h);
+
+      const line1 = document.createElement("div");
+      line1.className = "eq-line";
+      renderLatex(line1, templateLatex, true);
+      block.appendChild(line1);
+
+      const line2 = document.createElement("div");
+      line2.className = "eq-line";
+      renderLatex(line2, substitutedLatex, true);
+      block.appendChild(line2);
+
+      const metaWrap = document.createElement("div");
+      metaWrap.className = "eq-meta";
+
+      if (meta.symbols && meta.symbols.length) {
+        const st = document.createElement("div");
+        st.className = "eq-meta-title";
+        st.textContent = "Символи в тази формула:";
+        metaWrap.appendChild(st);
+
+        meta.symbols.forEach(s => {
+          const row = document.createElement("div");
+          const chip = document.createElement("span");
+          chip.className = "chip chip-info";
+          renderInlineLatex(chip, s.sym);
+          row.appendChild(chip);
+
+          const text = document.createElement("span");
+          text.textContent = s.text;
+          row.appendChild(text);
+          metaWrap.appendChild(row);
+        });
+      }
+
+      if (meta.coeff && meta.coeff.length) {
+        const ct = document.createElement("div");
+        ct.className = "eq-meta-title";
+        ct.style.marginTop = "6px";
+        ct.textContent = "Коефициенти и диапазони:";
+        metaWrap.appendChild(ct);
+
+        meta.coeff.forEach(c => {
+          const chipClass = statusClassByRange(c.value, c.min, c.max);
+          const row = document.createElement("div");
+          row.innerHTML = `<span class="chip ${chipClass}">${c.name}: ${nf(c.value, c.d || 3)}</span> диапазон ${nf(c.min, c.d || 3)} – ${nf(c.max, c.d || 3)} ${c.unit || ""} ${c.why ? `| ${c.why}` : ""}`;
+          metaWrap.appendChild(row);
+        });
+      }
+
+      if (meta.comment) {
+        const comment = document.createElement("div");
+        comment.style.marginTop = "6px";
+        comment.textContent = meta.comment;
+        metaWrap.appendChild(comment);
+      }
+
+      if ((meta.symbols && meta.symbols.length) || (meta.coeff && meta.coeff.length) || meta.comment) {
+        block.appendChild(metaWrap);
+      }
+
+      container.appendChild(block);
+    }
+
+    function renderLiveFormulas() {
+      const status = document.getElementById("liveFormulaStatus");
+      const root = document.getElementById("liveFormulas");
+      root.innerHTML = "";
+
+      const raw = localStorage.getItem("coilCalcData");
+      const updated = localStorage.getItem("coilCalcUpdatedAt");
+
+      if (!raw) {
+        status.textContent = "Няма данни от калкулатора. Въведи стойности в index.html и натисни Изчисли.";
+        return;
+      }
+
+      const data = JSON.parse(raw);
+      const i = data.inputs;
+      const r = data.results;
+      status.textContent = `Заредени данни от калкулатора (${updated || "без време"}). DN: ${i.selectedDN}, ID: ${nf(r.id_mm,1)} mm.`;
+
+      addEq(
+        root,
+        "Преобразуване на дебит",
+        String.raw`Q_{L/s}=\frac{\dot V_L}{3600},\quad Q=\frac{Q_{L/s}}{1000}`,
+        String.raw`Q_{L/s}=\frac{${nf(i.q_l_h, 1)}\,L/h}{3600}=${nf(r.q_l_s,4)}\,L/s,\quad Q=\frac{${nf(r.q_l_s,4)}}{1000}=${nf(r.q_m3_s, 6)}\,m^3/s`,
+        {
+          symbols: [
+            { sym: String.raw`\dot V_L`, text: "входен дебит в L/h" },
+            { sym: String.raw`Q_{L/s}`, text: "дебит в литри за секунда" },
+            { sym: String.raw`Q`, text: "дебит в m³/s за хидравликата" }
+          ]
+        }
+      );
+
+      addEq(
+        root,
+        "Светъл отвор от OD и дебелина",
+        String.raw`D_i = OD - 2s`,
+        String.raw`D_i = ${nf(i.od_mm,1)}\,mm - 2\cdot ${nf(i.wall_mm,1)}\,mm = ${nf(r.id_mm,1)}\,mm`,
+        {
+          symbols: [
+            { sym: String.raw`OD`, text: "външен диаметър" },
+            { sym: String.raw`s`, text: "дебелина на стената" },
+            { sym: String.raw`D_i`, text: "светъл отвор" }
+          ]
+        }
+      );
+
+      addEq(
+        root,
+        "Площ на сечение",
+        String.raw`A = \frac{\pi D_i^2}{4}`,
+        String.raw`A = \frac{\pi\cdot (${nf(r.id_mm/1000,4)}\,m)^2}{4} = ${nf(r.area_m2,6)}\,m^2`,
+        { symbols: [{ sym: String.raw`A`, text: "площ на напречно сечение" }, { sym: String.raw`D_i`, text: "вътрешен диаметър" }] }
+      );
+
+      addEq(
+        root,
+        "Необходим обем",
+        String.raw`V = Qt`,
+        String.raw`V = ${nf(r.q_m3_s,6)}\,m^3/s \cdot ${nf(i.t,1)}\,s = ${nf(r.volume_m3,6)}\,m^3 = ${nf(r.volume_l,3)}\,L`,
+        { symbols: [{ sym: String.raw`V`, text: "необходим обем" }, { sym: String.raw`t`, text: "време на задръжка" }] }
+      );
+
+      addEq(
+        root,
+        "Дължина на серпентината",
+        String.raw`L = \frac{V}{A}`,
+        String.raw`L = \frac{${nf(r.volume_m3,6)}\,m^3}{${nf(r.area_m2,6)}\,m^2} = ${nf(r.length_m,3)}\,m`,
+        { symbols: [{ sym: String.raw`L`, text: "обща дължина на задръжката" }] }
+      );
+
+      addEq(
+        root,
+        "Скорост",
+        String.raw`v = \frac{Q}{A}`,
+        String.raw`v = \frac{${nf(r.q_m3_s,6)}\,m^3/s}{${nf(r.area_m2,6)}\,m^2} = ${nf(r.velocity_m_s,3)}\,m/s`,
+        {
+          symbols: [{ sym: String.raw`v`, text: "средна скорост на флуида" }],
+          comment: `CIP диапазон: ${nf(i.cipMin,2)} – ${nf(i.cipMax,2)} m/s`
+        }
+      );
+
+      addEq(
+        root,
+        "Reynolds",
+        String.raw`Re = \frac{\rho v D_i}{\mu}`,
+        String.raw`\mu=\frac{${nf(i.mu_mpa_s,3)}\,mPa\cdot s}{1000}=${nf(i.mu_mpa_s/1000,6)}\,Pa\cdot s,\quad Re = \frac{${nf(i.rho,1)}\,kg/m^3 \cdot ${nf(r.velocity_m_s,3)}\,m/s \cdot ${nf(r.id_mm/1000,4)}\,m}{${nf(i.mu_mpa_s/1000,6)}\,Pa\cdot s} = ${nf(r.re,0)}`,
+        { symbols: [{ sym: String.raw`\rho`, text: "плътност" }, { sym: String.raw`\mu`, text: "динамичен вискозитет" }, { sym: String.raw`Re`, text: "критерий за режим" }] }
+      );
+
+      addEq(
+        root,
+        "Локални съпротивления",
+        String.raw`\Sigma K = n_{elbow}K_{90} + K_{in/out}`,
+        String.raw`\Sigma K = ${nf(r.elbows90,0)}\cdot ${nf(i.kElbow,2)} ${i.includeIO ? "+ 1.5" : "+ 0"} = ${nf(r.kTotal,3)}`,
+        {
+          symbols: [{ sym: String.raw`\Sigma K`, text: "сумарно локално съпротивление" }, { sym: String.raw`K_{90}`, text: "коефициент на коляно 90°" }],
+          coeff: [
+            { name: "K90", value: i.kElbow, min: 0.1, max: 2.0, d: 2, why: "зависи от R/D, тип коляно и грапавост" },
+            { name: "(L/D)коляно", value: i.leqElbowLD || 30, min: 5, max: 120, d: 1, why: "зависи от геометрия и справочник" }
+          ]
+        }
+      );
+
+      addEq(
+        root,
+        "Пад на налягане",
+        String.raw`\Delta p = \left(f\frac{L}{D_i}+\Sigma K\right)\frac{\rho v^2}{2}`,
+        String.raw`\Delta p = ${nf(r.dpTotal_pa,2)}\,Pa = ${nf(r.dpTotal_pa/1000,3)}\,kPa = ${nf(r.dpTotal_bar,4)}\,bar`,
+        {
+          symbols: [{ sym: String.raw`\Delta p`, text: "общ пад на налягане" }, { sym: String.raw`f`, text: "Darcy коефициент" }, { sym: String.raw`\Sigma K`, text: "локални загуби" }],
+          coeff: [
+            { name: "ε [mm]", value: i.roughness_mm, min: 0.0005, max: 0.1, d: 4, why: "материал и състояние на вътрешната повърхност" }
+          ]
+        }
+      );
+
+      addEq(
+        root,
+        "CIP проверка",
+        String.raw`v_{CIP,min} \le v \le v_{CIP,max}`,
+        String.raw`${nf(i.cipMin,2)}\,m/s \le ${nf(r.velocity_m_s,3)}\,m/s \le ${nf(i.cipMax,2)}\,m/s`,
+        {
+          symbols: [{ sym: String.raw`v_{CIP,min/max}`, text: "зададени технологични граници за измиване" }],
+          coeff: [
+            { name: "vCIP,min", value: i.cipMin, min: 0.5, max: 3.0, d: 2 },
+            { name: "vCIP,max", value: i.cipMax, min: 0.8, max: 4.0, d: 2 }
+          ]
+        }
+      );
+    }
+
+    window.addEventListener("load", () => {
+      setTimeout(renderLiveFormulas, 100);
+    });
+  </script>
+</body>
+</html>
