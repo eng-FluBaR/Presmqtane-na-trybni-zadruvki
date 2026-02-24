@@ -359,7 +359,7 @@
       <h1>Пресмятане на тръбна задръжка тип серпентина</h1>
       <p>
         Оразмеряване за вода и течни млечни продукти по подход Darcy–Weisbach + локални съпротивления,
-        с избор на неръждаеми безшевни тръби по стандартни размери.
+        с избор на неръждаеми тръби за хранително-вкусова промишленост по DIN EN 10357.
       </p>
       <div class="header-actions">
         <a class="header-link" href="theory.html">Разширена теория и формули</a>
@@ -383,7 +383,7 @@
 
         <div class="form-row">
           <div class="field">
-            <label for="pipeStandard">Серия тръби (неръждаеми безшевни)</label>
+            <label for="pipeStandard">Серия тръби (DIN EN 10357)</label>
             <select id="pipeStandard"></select>
           </div>
           <div class="field">
@@ -477,6 +477,75 @@
           <div class="field"></div>
         </div>
 
+        <div class="form-row">
+          <div class="field">
+            <label class="inline" style="margin-top:0;">
+              <input id="use11852" type="checkbox" />
+              <span>Добави тройници/колена DIN 11852</span>
+            </label>
+            <label for="lib11852">Библиотека DIN 11852</label>
+            <select id="lib11852"></select>
+            <div id="lib11852Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
+            <div class="form-row" style="margin-bottom:0;">
+              <div class="field">
+                <label for="count11852">Брой</label>
+                <input id="count11852" type="number" min="0" max="200" step="1" value="0" />
+              </div>
+              <div class="field">
+                <label for="k11852">K за 1 бр.</label>
+                <input id="k11852" type="number" min="0.05" max="8" step="0.05" value="1.50" />
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label class="inline" style="margin-top:0;">
+              <input id="use11851" type="checkbox" />
+              <span>Добави резбови съединения DIN 11851</span>
+            </label>
+            <label for="lib11851">Библиотека DIN 11851</label>
+            <select id="lib11851"></select>
+            <div id="lib11851Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
+            <div class="form-row" style="margin-bottom:0;">
+              <div class="field">
+                <label for="count11851">Брой</label>
+                <input id="count11851" type="number" min="0" max="200" step="1" value="0" />
+              </div>
+              <div class="field">
+                <label for="k11851">K за 1 бр.</label>
+                <input id="k11851" type="number" min="0.05" max="8" step="0.05" value="0.80" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label class="inline" style="margin-top:0;">
+              <input id="use32676" type="checkbox" />
+              <span>Добави клампови съединения DIN 32676</span>
+            </label>
+            <label for="lib32676">Библиотека DIN 32676</label>
+            <select id="lib32676"></select>
+            <div id="lib32676Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
+            <div class="form-row" style="margin-bottom:0;">
+              <div class="field">
+                <label for="count32676">Брой</label>
+                <input id="count32676" type="number" min="0" max="200" step="1" value="0" />
+              </div>
+              <div class="field">
+                <label for="k32676">K за 1 бр.</label>
+                <input id="k32676" type="number" min="0.05" max="8" step="0.05" value="0.20" />
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="note" style="margin-top:28px; padding:8px; font-size:12px;">
+              Тези елементи са опционални. По подразбиране не участват в сметката.
+              При включване се добавят към локалните съпротивления и формулите.
+            </div>
+          </div>
+        </div>
+
         <div class="inline">
           <input id="includeIO" type="checkbox" checked />
           <label for="includeIO" style="margin:0;">Добави локални загуби вход/изход (общо K ≈ 1.5)</label>
@@ -492,10 +561,10 @@
         </div>
 
         <div class="note">
-          Размерите в каталога са типични за европейска практика при неръждаеми безшевни тръби
-          (EN 10216-5, размерни серии по ISO 1127). Преди реализация потвърди актуалната серия,
-          клас стомана и допустими дебелини по твоята спецификация. EN 13480 не дава единна "библиотека"
-          за всички фитинги; използвай проектни таблици/каталожни данни на производителя.
+          Размерите в каталога са типични за тръби за хранително-вкусова промишленост по DIN EN 10357
+          (серии A и D). Преди реализация потвърди актуалната серия, клас стомана и допустими дебелини
+          по твоята спецификация и каталога на доставчика. Локалните съпротивления за фитинги се сверяват
+          по проектни таблици и каталожни данни на производителя.
         </div>
       </div>
 
@@ -563,27 +632,26 @@
     };
 
     const pipeSeries = {
-      "EN 10216-5 / ISO 1127 (ориентировъчна серия 1)": [
-        { dn: "DN15", od: 21.3, t: 1.6 },
-        { dn: "DN20", od: 26.9, t: 1.6 },
-        { dn: "DN25", od: 33.7, t: 2.0 },
-        { dn: "DN32", od: 42.4, t: 2.0 },
-        { dn: "DN40", od: 48.3, t: 2.0 },
-        { dn: "DN50", od: 60.3, t: 2.0 },
-        { dn: "DN65", od: 76.1, t: 2.0 },
-        { dn: "DN80", od: 88.9, t: 2.0 },
-        { dn: "DN100", od: 114.3, t: 2.0 }
+      "DIN EN 10357, серия A (DIN 11850)": [
+        { dn: "DN10", od: 13.0, t: 1.5 },
+        { dn: "DN15", od: 19.0, t: 1.5 },
+        { dn: "DN20", od: 23.0, t: 1.5 },
+        { dn: "DN25", od: 29.0, t: 1.5 },
+        { dn: "DN32", od: 35.0, t: 1.5 },
+        { dn: "DN40", od: 41.0, t: 1.5 },
+        { dn: "DN50", od: 53.0, t: 1.5 },
+        { dn: "DN65", od: 70.0, t: 2.0 },
+        { dn: "DN80", od: 85.0, t: 2.0 },
+        { dn: "DN100", od: 104.0, t: 2.0 }
       ],
-      "EN 10216-5 / ISO 1127 (по-тежка серия)": [
-        { dn: "DN15", od: 21.3, t: 2.0 },
-        { dn: "DN20", od: 26.9, t: 2.0 },
-        { dn: "DN25", od: 33.7, t: 2.6 },
-        { dn: "DN32", od: 42.4, t: 2.6 },
-        { dn: "DN40", od: 48.3, t: 2.6 },
-        { dn: "DN50", od: 60.3, t: 2.6 },
-        { dn: "DN65", od: 76.1, t: 3.0 },
-        { dn: "DN80", od: 88.9, t: 3.0 },
-        { dn: "DN100", od: 114.3, t: 3.0 }
+      "DIN EN 10357, серия D (ISO 2037)": [
+        { dn: "1\" (≈DN25)", od: 25.0, t: 1.2 },
+        { dn: "1 1/4\" (≈DN32)", od: 32.0, t: 1.2 },
+        { dn: "1 1/2\" (≈DN40)", od: 38.0, t: 1.2 },
+        { dn: "2\" (≈DN50)", od: 51.0, t: 1.2 },
+        { dn: "2 1/2\" (≈DN65)", od: 63.5, t: 1.6 },
+        { dn: "3\" (≈DN80)", od: 76.1, t: 1.6 },
+        { dn: "4\" (≈DN100)", od: 101.6, t: 2.0 }
       ]
     };
 
@@ -610,6 +678,51 @@
       }
     };
 
+    const fittingLibrary11852 = {
+      "DIN 11852 | Гладко коляно/елемент (типично)": {
+        k: 1.20,
+        source: "Референтни локални съпротивления за санитарни фитинги (Crane/Idelchik, типичен диапазон)"
+      },
+      "DIN 11852 | По-консервативна стойност": {
+        k: 1.50,
+        source: "Консервативна проектна стойност при неизвестна геометрия/състояние"
+      },
+      "Ръчно въвеждане": {
+        k: 1.50,
+        source: "Потребителски вход"
+      }
+    };
+
+    const fittingLibrary11851 = {
+      "DIN 11851 | Резбово съединение (типично)": {
+        k: 0.80,
+        source: "Референтни локални съпротивления за резбови връзки (типична оценка)"
+      },
+      "DIN 11851 | По-консервативна стойност": {
+        k: 1.10,
+        source: "Консервативна проектна стойност при повишени локални загуби"
+      },
+      "Ръчно въвеждане": {
+        k: 0.80,
+        source: "Потребителски вход"
+      }
+    };
+
+    const fittingLibrary32676 = {
+      "DIN 32676 | Tri-clamp (типично)": {
+        k: 0.20,
+        source: "Референтни локални съпротивления за клампови връзки (типична оценка)"
+      },
+      "DIN 32676 | По-консервативна стойност": {
+        k: 0.35,
+        source: "Консервативна проектна стойност при по-неблагоприятни връзки"
+      },
+      "Ръчно въвеждане": {
+        k: 0.20,
+        source: "Потребителски вход"
+      }
+    };
+
     const fluidSelect = document.getElementById("fluid");
     const rhoInput = document.getElementById("rho");
     const muInput = document.getElementById("mu");
@@ -617,6 +730,12 @@
     const pipeSizeSelect = document.getElementById("pipeSize");
     const elbowTypeSelect = document.getElementById("elbowType");
     const elbowSourceInfo = document.getElementById("elbowSourceInfo");
+    const lib11852Select = document.getElementById("lib11852");
+    const lib11851Select = document.getElementById("lib11851");
+    const lib32676Select = document.getElementById("lib32676");
+    const lib11852Info = document.getElementById("lib11852Info");
+    const lib11851Info = document.getElementById("lib11851Info");
+    const lib32676Info = document.getElementById("lib32676Info");
     const pipeIdInfo = document.getElementById("pipeIdInfo");
     const calcBtn = document.getElementById("calcBtn");
     const exportWordBtn = document.getElementById("exportWordBtn");
@@ -650,6 +769,9 @@
       applyRangeClass(document.getElementById("kElbow"), rangeTone(values.kElbow, 0.1, 2.0));
       applyRangeClass(document.getElementById("leqElbowLD"), rangeTone(values.leqElbowLD, 5, 120));
       applyRangeClass(document.getElementById("targetSpeed"), rangeTone(values.targetSpeed, 0.3, 4.0));
+      applyRangeClass(document.getElementById("k11852"), rangeTone(values.k11852, 0.05, 8.0));
+      applyRangeClass(document.getElementById("k11851"), rangeTone(values.k11851, 0.05, 8.0));
+      applyRangeClass(document.getElementById("k32676"), rangeTone(values.k32676, 0.05, 8.0));
     }
 
     function fillFluids() {
@@ -691,6 +813,51 @@
       elbowTypeSelect.value = "Crane TP-410 | 90° long radius welded (R/D≈1.5)";
       updateElbowFromLibrary();
       elbowTypeSelect.addEventListener("change", updateElbowFromLibrary);
+    }
+
+    function fillFittingLibraries() {
+      fillOneFittingLibrary(lib11852Select, fittingLibrary11852, "DIN 11852 | По-консервативна стойност", update11852FromLibrary);
+      fillOneFittingLibrary(lib11851Select, fittingLibrary11851, "DIN 11851 | Резбово съединение (типично)", update11851FromLibrary);
+      fillOneFittingLibrary(lib32676Select, fittingLibrary32676, "DIN 32676 | Tri-clamp (типично)", update32676FromLibrary);
+    }
+
+    function fillOneFittingLibrary(selectEl, library, defaultKey, onChangeFn) {
+      Object.keys(library).forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = defaultKey;
+      onChangeFn();
+      selectEl.addEventListener("change", onChangeFn);
+    }
+
+    function update11852FromLibrary() {
+      const selected = fittingLibrary11852[lib11852Select.value];
+      if (!selected) return;
+      if (lib11852Select.value !== "Ръчно въвеждане") {
+        document.getElementById("k11852").value = selected.k;
+      }
+      lib11852Info.textContent = `Източник: ${selected.source}`;
+    }
+
+    function update11851FromLibrary() {
+      const selected = fittingLibrary11851[lib11851Select.value];
+      if (!selected) return;
+      if (lib11851Select.value !== "Ръчно въвеждане") {
+        document.getElementById("k11851").value = selected.k;
+      }
+      lib11851Info.textContent = `Източник: ${selected.source}`;
+    }
+
+    function update32676FromLibrary() {
+      const selected = fittingLibrary32676[lib32676Select.value];
+      if (!selected) return;
+      if (lib32676Select.value !== "Ръчно въвеждане") {
+        document.getElementById("k32676").value = selected.k;
+      }
+      lib32676Info.textContent = `Източник: ${selected.source}`;
     }
 
     function updateElbowFromLibrary() {
@@ -761,36 +928,44 @@
 
       const kElbowsOnly = elbows90 * inputs.kElbow;
       const kIO = inputs.includeIO ? 1.5 : 0;
-      const kTotal = kElbowsOnly + kIO;
+      const k11852 = inputs.use11852 ? inputs.count11852 * inputs.k11852 : 0;
+      const k11851 = inputs.use11851 ? inputs.count11851 * inputs.k11851 : 0;
+      const k32676 = inputs.use32676 ? inputs.count32676 * inputs.k32676 : 0;
+      const kExtras = k11852 + k11851 + k32676;
+      const kTotal = kElbowsOnly + kIO + kExtras;
 
       const leqElbows = elbows90 * inputs.leqElbowLD * d;
       const leqIO = (inputs.lossMethod === "leq" && inputs.includeIO && f > 0) ? (kIO / f) * d : 0;
+      const leqExtras = (inputs.lossMethod === "leq" && f > 0) ? (kExtras / f) * d : 0;
 
       const dyn = inputs.rho * Math.pow(velocity, 2) / 2;
       const dpLinear = f * (length / d) * dyn;
       let dpElbows = 0;
       let dpIO = 0;
+      let dpExtras = 0;
       let dpLocal = 0;
       let dpTotal = 0;
       let lHydraulicTotal = length;
 
       if (inputs.lossMethod === "leq") {
-        lHydraulicTotal = length + leqElbows + leqIO;
+        lHydraulicTotal = length + leqElbows + leqIO + leqExtras;
         dpElbows = f * (leqElbows / d) * dyn;
         dpIO = f * (leqIO / d) * dyn;
-        dpLocal = dpElbows + dpIO;
+        dpExtras = f * (leqExtras / d) * dyn;
+        dpLocal = dpElbows + dpIO + dpExtras;
         dpTotal = f * (lHydraulicTotal / d) * dyn;
       } else {
         dpElbows = kElbowsOnly * dyn;
         dpIO = kIO * dyn;
-        dpLocal = kTotal * dyn;
+        dpExtras = kExtras * dyn;
+        dpLocal = dpElbows + dpIO + dpExtras;
         dpTotal = dpLinear + dpLocal;
       }
 
       return {
         d_mm, d, area, velocity, volume, volume_l, volumePerMeter_l_m, retention_s_l, length,
-        elbows90, re, f, kElbowsOnly, kIO, kTotal, leqElbows, leqIO, lHydraulicTotal,
-        dyn, dpLinear, dpElbows, dpIO, dpLocal, dpTotal,
+        elbows90, re, f, kElbowsOnly, kIO, k11852, k11851, k32676, kExtras, kTotal, leqElbows, leqIO, leqExtras, lHydraulicTotal,
+        dyn, dpLinear, dpElbows, dpIO, dpExtras, dpLocal, dpTotal,
         dpLinearBar: dpLinear / 100000,
         dpLocalBar: dpLocal / 100000,
         dpTotalBar: dpTotal / 100000,
@@ -942,7 +1117,13 @@
         ["Плътност / вискозитет", `${fmt(report.rho,1)} kg/m³ / ${fmt(report.mu_mpa_s,3)} mPa·s`],
         ["CIP диапазон", `${fmt(report.cipMin,2)} – ${fmt(report.cipMax,2)} m/s`],
         ["Метод колена", `${report.lossMethod}`],
-        ["Коляно 90°", `${report.elbowType}; K=${fmt(report.kElbow,2)}; (L/D)=${fmt(report.leqElbowLD,1)}; вход/изход=${report.includeIO ? "Да" : "Не"}`]
+        ["Коляно 90°", `${report.elbowType}; K=${fmt(report.kElbow,2)}; (L/D)=${fmt(report.leqElbowLD,1)}; вход/изход=${report.includeIO ? "Да" : "Не"}`],
+        ["DIN 11852", `${report.use11852 ? "Да" : "Не"}; брой=${fmt(report.count11852,0)}; K/бр=${fmt(report.k11852Single,2)}`],
+        ["DIN 11851", `${report.use11851 ? "Да" : "Не"}; брой=${fmt(report.count11851,0)}; K/бр=${fmt(report.k11851Single,2)}`],
+        ["DIN 32676", `${report.use32676 ? "Да" : "Не"}; брой=${fmt(report.count32676,0)}; K/бр=${fmt(report.k32676Single,2)}`],
+        ["Избор DIN 11852", `${report.lib11852}`],
+        ["Избор DIN 11851", `${report.lib11851}`],
+        ["Избор DIN 32676", `${report.lib32676}`]
       ];
 
       const results = [
@@ -958,11 +1139,13 @@
         ["Re / f", `${fmt(report.re,0)} / ${fmt(report.f,5)}`],
         ["ΣK / Kколена / Kвх-изх", `${fmt(report.kTotal,3)} / ${fmt(report.kElbowsOnly,3)} / ${fmt(report.kIO,3)}`],
         ["Leq колена / Leq вх-изх", `${fmt(report.leqElbows_m,3)} m / ${fmt(report.leqIO_m,3)} m`],
+        ["Leq доп. фитинги", `${fmt(report.leqExtras_m,3)} m`],
         ["Динамично налягане ρv²/2", `${fmt(report.dynamicPa,2)} Pa`],
         ["Общ пад на налягане", `${fmt(report.dpTotal_pa,2)} Pa | ${fmt(report.dpTotal_kpa,2)} kPa | ${fmt(report.dpTotal_bar,4)} bar`],
         ["Линейни загуби", `${fmt(report.dpLinear_kpa,2)} kPa`],
         ["Загуби в колена", `${fmt(report.dpElbows_kpa,2)} kPa`],
         ["Загуби вход/изход", `${fmt(report.dpIO_kpa,2)} kPa`],
+        ["Загуби доп. фитинги", `${fmt(report.dpExtras_kpa,2)} kPa`],
         ["Локални загуби общо", `${fmt(report.dpLocal_kpa,2)} kPa`],
         ["Препоръчан DN", `${report.recDN} | v=${fmt(report.recV,3)} m/s | Δp=${fmt(report.recDp,4)} bar`]
       ];
@@ -1196,11 +1379,23 @@
       const kElbow = parseFloat(document.getElementById("kElbow").value);
       const leqElbowLD = parseFloat(document.getElementById("leqElbowLD").value);
       const includeIO = document.getElementById("includeIO").checked;
+      const use11852 = document.getElementById("use11852").checked;
+      const count11852 = parseFloat(document.getElementById("count11852").value) || 0;
+      const k11852 = parseFloat(document.getElementById("k11852").value);
+      const lib11852 = lib11852Select.value;
+      const use11851 = document.getElementById("use11851").checked;
+      const count11851 = parseFloat(document.getElementById("count11851").value) || 0;
+      const k11851 = parseFloat(document.getElementById("k11851").value);
+      const lib11851 = lib11851Select.value;
+      const use32676 = document.getElementById("use32676").checked;
+      const count32676 = parseFloat(document.getElementById("count32676").value) || 0;
+      const k32676 = parseFloat(document.getElementById("k32676").value);
+      const lib32676 = lib32676Select.value;
       const cipMin = parseFloat(document.getElementById("cipMin").value);
       const cipMax = parseFloat(document.getElementById("cipMax").value);
       const targetSpeed = parseFloat(document.getElementById("targetSpeed").value);
 
-      updateInputBoundaryColors({ roughness_mm, kElbow, leqElbowLD, targetSpeed });
+      updateInputBoundaryColors({ roughness_mm, kElbow, leqElbowLD, targetSpeed, k11852, k11851, k32676 });
 
       if (cipMin >= cipMax) {
         alert("CIP минимална скорост трябва да е по-малка от максималната.");
@@ -1212,7 +1407,12 @@
         return;
       }
 
-      const inputs = { q, t, rho, mu, eps, segment, lossMethod, kElbow, leqElbowLD, includeIO };
+      const inputs = {
+        q, t, rho, mu, eps, segment, lossMethod, kElbow, leqElbowLD, includeIO,
+        use11852, count11852, k11852,
+        use11851, count11851, k11851,
+        use32676, count32676, k32676
+      };
 
       const selectedSeries = pipeSeries[pipeStandardSelect.value];
       const selectedIdx = parseInt(pipeSizeSelect.value, 10);
@@ -1237,6 +1437,7 @@
         length: main.length,
         elbows90: main.elbows90,
         kTotal: main.kTotal,
+        kExtras: main.kExtras,
         method: lossMethod,
         velocity: main.velocity,
         re: main.re,
@@ -1244,6 +1445,7 @@
         dpLinear: main.dpLinear,
         dpElbows: main.dpElbows,
         dpIO: main.dpIO,
+        dpExtras: main.dpExtras,
         dpLocal: main.dpLocal,
         dpTotal: main.dpTotal,
         dpTotalBar: main.dpTotalBar,
@@ -1252,7 +1454,8 @@
         cipTone: rangeTone(main.velocity, cipMin, cipMax),
         kTone: rangeTone(kElbow, 0.1, 2.0),
         epsTone: rangeTone(roughness_mm, 0.0005, 0.1),
-        leqTone: rangeTone(leqElbowLD, 5, 120)
+        leqTone: rangeTone(leqElbowLD, 5, 120),
+        extrasTone: rangeTone(main.kExtras, 0, 20)
       });
 
       renderProfiles(profiles, cipMin, cipMax);
@@ -1278,14 +1481,29 @@
         elbows90: main.elbows90,
         kElbowsOnly: main.kElbowsOnly,
         kIO: main.kIO,
+        k11852,
+        count11852,
+        use11852,
+        k11851,
+        count11851,
+        use11851,
+        k32676,
+        count32676,
+        use32676,
+        k11852Total: main.k11852,
+        k11851Total: main.k11851,
+        k32676Total: main.k32676,
+        kExtras: main.kExtras,
         kTotal: main.kTotal,
         leqElbows: main.leqElbows,
         leqIO: main.leqIO,
+        leqExtras: main.leqExtras,
         lHydraulicTotal: main.lHydraulicTotal,
         dyn: main.dyn,
         dpLinear: main.dpLinear,
         dpElbows: main.dpElbows,
         dpIO: main.dpIO,
+        dpExtras: main.dpExtras,
         dpLocal: main.dpLocal,
         dpTotal: main.dpTotal,
         dpTotalBar: main.dpTotalBar,
@@ -1314,6 +1532,18 @@
           elbowType: elbowTypeSelect.value,
           elbowSource: elbowLibrary[elbowTypeSelect.value]?.source || "",
           includeIO,
+          use11852,
+          lib11852,
+          count11852,
+          k11852,
+          use11851,
+          lib11851,
+          count11851,
+          k11851,
+          use32676,
+          lib32676,
+          count32676,
+          k32676,
           cipMin,
           cipMax,
           targetSpeed,
@@ -1338,13 +1568,19 @@
           elbows90: main.elbows90,
           kElbowsOnly: main.kElbowsOnly,
           kIO: main.kIO,
+          k11852: main.k11852,
+          k11851: main.k11851,
+          k32676: main.k32676,
+          kExtras: main.kExtras,
           kTotal: main.kTotal,
           leqElbows_m: main.leqElbows,
           leqIO_m: main.leqIO,
+          leqExtras_m: main.leqExtras,
           lHydraulicTotal_m: main.lHydraulicTotal,
           dpLinear_pa: main.dpLinear,
           dpElbows_pa: main.dpElbows,
           dpIO_pa: main.dpIO,
+          dpExtras_pa: main.dpExtras,
           dpLocal_pa: main.dpLocal,
           dpTotal_pa: main.dpTotal,
           dpTotal_bar: main.dpTotalBar,
@@ -1389,14 +1625,32 @@
         kTotal: main.kTotal,
         kElbowsOnly: main.kElbowsOnly,
         kIO: main.kIO,
+        k11852: main.k11852,
+        k11851: main.k11851,
+        k32676: main.k32676,
+        kExtras: main.kExtras,
         leqElbows_m: main.leqElbows,
         leqIO_m: main.leqIO,
+        leqExtras_m: main.leqExtras,
         volume_m3: main.volume,
         lHydraulicTotal_m: main.lHydraulicTotal,
         includeIO,
+        use11852,
+        lib11852,
+        count11852,
+        k11852Single: k11852,
+        use11851,
+        lib11851,
+        count11851,
+        k11851Single: k11851,
+        use32676,
+        lib32676,
+        count32676,
+        k32676Single: k32676,
         dpLinear_kpa: main.dpLinear / 1000,
         dpElbows_kpa: main.dpElbows / 1000,
         dpIO_kpa: main.dpIO / 1000,
+        dpExtras_kpa: main.dpExtras / 1000,
         dpLocal_kpa: main.dpLocal / 1000,
         dpTotal_pa: main.dpTotal,
         dpTotal_kpa: main.dpTotal / 1000,
@@ -1447,12 +1701,14 @@
         metric("Δp линейни [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
         metric("Δp колена [kPa]", fmt(r.dpElbows / 1000, 2), "small"),
         metric("Δp вход/изход [kPa]", fmt(r.dpIO / 1000, 2), "small"),
+        metric("Δp доп. фитинги [kPa]", fmt(r.dpExtras / 1000, 2), "small"),
         metric("Δp локални [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
         metric("Δp общ [kPa]", fmt(r.dpTotal / 1000, 2), "small"),
         metric("Δp общ [bar]", fmt(r.dpTotalBar, 4), "small"),
         metric("CIP проверка", r.cipStatus, "small", r.cipTone),
         metric("ε диапазон", r.epsTone === "ok" ? "В диапазон" : r.epsTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.epsTone),
-        metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone)
+        metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone),
+        metric("ΣK доп. фитинги", fmt(r.kExtras, 2), "small", r.extrasTone)
       ].join("");
     }
 
@@ -1463,9 +1719,10 @@
     function renderFormulas(x) {
       const f = document.getElementById("formulas");
       const ioPart = x.includeIO ? " + 1.5" : "";
+      const extrasText = `Kдоп = K11852 + K11851 + K32676 = ${fmt(x.k11852Total, 3)} + ${fmt(x.k11851Total, 3)} + ${fmt(x.k32676Total, 3)} = ${fmt(x.kExtras, 3)}`;
       const lossBlock = x.lossMethod === "leq"
-        ? `11) Метод Leq (еквивалентна дължина):\nLeq(колена) = nколена·(L/D)коляно·D = ${x.elbows90}·${fmt(x.leqElbowLD, 1)}·${fmt(x.d, 4)} = ${fmt(x.leqElbows, 3)} m\nLeq(вход/изход) = (Kвх/изх / f)·D = (${fmt(x.kIO, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqIO, 3)} m\nLхидр = L + Leq(колена) + Leq(вх/изх) = ${fmt(x.length, 3)} + ${fmt(x.leqElbows, 3)} + ${fmt(x.leqIO, 3)} = ${fmt(x.lHydraulicTotal, 3)} m\nΔp = f·(Lхидр/D)·ρv²/2 = ${fmt(x.dpTotal, 2)} Pa`
-        : `11) Метод ζ (локални коефициенти):\nΣK = nколена·Kколяно${x.includeIO ? " + Kвх/изх" : ""}\nΣK = ${x.elbows90}·${fmt(x.kElbow, 2)}${ioPart} = ${fmt(x.kTotal, 3)}\nΔpлок = ΣK·ρv²/2 = ${fmt(x.kTotal, 3)}·${fmt(x.dyn, 3)} = ${fmt(x.dpLocal, 2)} Pa`;
+        ? `11) Метод Leq (еквивалентна дължина):\nLeq(колена) = nколена·(L/D)коляно·D = ${x.elbows90}·${fmt(x.leqElbowLD, 1)}·${fmt(x.d, 4)} = ${fmt(x.leqElbows, 3)} m\nLeq(вход/изход) = (Kвх/изх / f)·D = (${fmt(x.kIO, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqIO, 3)} m\nLeq(доп) = (Kдоп / f)·D = (${fmt(x.kExtras, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqExtras, 3)} m\nLхидр = L + Leq(колена) + Leq(вх/изх) + Leq(доп) = ${fmt(x.length, 3)} + ${fmt(x.leqElbows, 3)} + ${fmt(x.leqIO, 3)} + ${fmt(x.leqExtras, 3)} = ${fmt(x.lHydraulicTotal, 3)} m\n${extrasText}\nΔp = f·(Lхидр/D)·ρv²/2 = ${fmt(x.dpTotal, 2)} Pa`
+        : `11) Метод ζ (локални коефициенти):\nΣK = nколена·Kколяно${x.includeIO ? " + Kвх/изх" : ""} + Kдоп\n${extrasText}\nΣK = ${x.elbows90}·${fmt(x.kElbow, 2)}${ioPart} + ${fmt(x.kExtras, 3)} = ${fmt(x.kTotal, 3)}\nΔpлок = ΣK·ρv²/2 = ${fmt(x.kTotal, 3)}·${fmt(x.dyn, 3)} = ${fmt(x.dpLocal, 2)} Pa`;
 
       const lines = [
         formulaLine(`1) Преобразуване на дебит:\nQ = ${fmt(x.q_l_h, 1)} L/h = ${fmt(x.q_l_s, 4)} L/s = ${fmt(x.q_l_h / 1000, 4)} m³/h = ${fmt(x.q, 6)} m³/s`),
@@ -1481,7 +1738,7 @@
         formulaLine(`${lossBlock}\nВъведен диапазон за K(90°): min 0.10 / max 2.00; (L/D)коляно: min 5 / max 120`),
         formulaLine(`12) Динамично налягане:\nρv²/2 = ${fmt(x.rho, 1)}·(${fmt(x.velocity, 4)})²/2 = ${fmt(x.dyn, 3)} Pa`),
         formulaLine(`13) Пад по дължина:\nΔpₗ = f·(L/D)·ρv²/2 = ${fmt(x.f, 5)}·(${fmt(x.length, 3)}/${fmt(x.d, 4)})·${fmt(x.dyn, 3)} = ${fmt(x.dpLinear, 2)} Pa`),
-        formulaLine(`14) Локален пад (детайл):\nΔpколена = ${fmt(x.dpElbows, 2)} Pa; Δpвх/изх = ${fmt(x.dpIO, 2)} Pa; Δpлок = ${fmt(x.dpLocal, 2)} Pa`),
+        formulaLine(`14) Локален пад (детайл):\nΔpколена = ${fmt(x.dpElbows, 2)} Pa; Δpвх/изх = ${fmt(x.dpIO, 2)} Pa; Δpдоп = ${fmt(x.dpExtras, 2)} Pa; Δpлок = ${fmt(x.dpLocal, 2)} Pa`),
         formulaLine(`15) Общ пад на налягане:\nΔp = Δpₗ + Δpₗₒc = ${fmt(x.dpLinear, 2)} + ${fmt(x.dpLocal, 2)} = ${fmt(x.dpTotal, 2)} Pa (${fmt(x.dpTotal / 1000, 2)} kPa)`),
         formulaLine(`16) Преобразуване за избор на помпа:\nΔp [bar] = Δp [Pa] / 100000 = ${fmt(x.dpTotal, 2)} / 100000 = ${fmt(x.dpTotalBar, 4)} bar`),
         formulaLine(`17) CIP критерий за измиване:\nцелеви диапазон v = ${fmt(x.cipMin, 2)} до ${fmt(x.cipMax, 2)} m/s; текущо v = ${fmt(x.velocity, 3)} m/s → ${x.cipStatus}`)
@@ -1512,6 +1769,7 @@
     fillFluids();
     fillStandards();
     fillElbowLibrary();
+    fillFittingLibraries();
     bindAutoRecalculation();
     pipeSizeSelect.addEventListener("change", updatePipeIdInfo);
     calcBtn.addEventListener("click", calc);
