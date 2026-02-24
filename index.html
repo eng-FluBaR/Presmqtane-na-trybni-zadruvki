@@ -558,6 +558,7 @@
         <div class="button-row secondary">
           <button id="exportWordBtn" class="ghost">Протокол Word</button>
           <button id="exportPdfBtn" class="ghost">Протокол PDF</button>
+          <button id="resetAllBtn" class="ghost">Рестарт на полетата</button>
         </div>
 
         <div class="note">
@@ -740,8 +741,10 @@
     const calcBtn = document.getElementById("calcBtn");
     const exportWordBtn = document.getElementById("exportWordBtn");
     const exportPdfBtn = document.getElementById("exportPdfBtn");
+    const resetAllBtn = document.getElementById("resetAllBtn");
     const profileTable = document.getElementById("profileTable");
     const recommendationBox = document.getElementById("recommendationBox");
+    const FORM_STATE_KEY = "coilCalcFormState";
     let lastProtocolData = null;
     let lastFormulaLines = [];
 
@@ -1060,6 +1063,149 @@
       localStorage.setItem("coilCalcUpdatedAt", new Date().toISOString());
     }
 
+    function setControlValue(id, value) {
+      const el = document.getElementById(id);
+      if (!el || value === undefined || value === null) return;
+      if (el.type === "checkbox") {
+        el.checked = Boolean(value);
+      } else {
+        el.value = value;
+      }
+    }
+
+    function getCurrentFormState() {
+      const ids = [
+        "flow", "retention", "fluid", "rho", "mu", "pipeStandard", "pipeSize", "roughness", "straightSeg",
+        "lossMethod", "elbowType", "kElbow", "leqElbowLD", "includeIO", "cipMin", "cipMax", "targetSpeed",
+        "use11852", "lib11852", "count11852", "k11852",
+        "use11851", "lib11851", "count11851", "k11851",
+        "use32676", "lib32676", "count32676", "k32676"
+      ];
+      const state = {};
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        state[id] = el.type === "checkbox" ? el.checked : el.value;
+      });
+      return state;
+    }
+
+    function saveFormState() {
+      localStorage.setItem(FORM_STATE_KEY, JSON.stringify(getCurrentFormState()));
+    }
+
+    function restoreInputsFromSession() {
+      const rawFormState = localStorage.getItem(FORM_STATE_KEY);
+      if (rawFormState) {
+        try {
+          const state = JSON.parse(rawFormState);
+          if (state.pipeStandard && pipeSeries[state.pipeStandard]) {
+            pipeStandardSelect.value = state.pipeStandard;
+            fillPipeSizes();
+          }
+          if (state.pipeSize !== undefined && state.pipeSize !== null) {
+            pipeSizeSelect.value = state.pipeSize;
+          }
+
+          [
+            "flow", "retention", "fluid", "rho", "mu", "roughness", "straightSeg", "lossMethod", "kElbow", "leqElbowLD",
+            "includeIO", "cipMin", "cipMax", "targetSpeed", "elbowType",
+            "use11852", "lib11852", "count11852", "k11852",
+            "use11851", "lib11851", "count11851", "k11851",
+            "use32676", "lib32676", "count32676", "k32676"
+          ].forEach(id => setControlValue(id, state[id]));
+
+          updateElbowFromLibrary();
+          update11852FromLibrary();
+          update11851FromLibrary();
+          update32676FromLibrary();
+
+          setControlValue("kElbow", state.kElbow);
+          setControlValue("k11852", state.k11852);
+          setControlValue("k11851", state.k11851);
+          setControlValue("k32676", state.k32676);
+
+          updatePipeIdInfo();
+          return;
+        } catch (_err) {
+        }
+      }
+
+      const raw = localStorage.getItem("coilCalcData");
+      if (!raw) return;
+
+      try {
+        const parsed = JSON.parse(raw);
+        const i = parsed?.inputs;
+        if (!i) return;
+
+        if (i.pipeStandard && pipeSeries[i.pipeStandard]) {
+          pipeStandardSelect.value = i.pipeStandard;
+          fillPipeSizes();
+        }
+
+        if (Number.isFinite(i.pipeSizeIndex)) {
+          const idx = Number(i.pipeSizeIndex);
+          if (idx >= 0 && idx < pipeSizeSelect.options.length) {
+            pipeSizeSelect.selectedIndex = idx;
+          }
+        }
+
+        if (i.fluid && fluidDb[i.fluid]) fluidSelect.value = i.fluid;
+        if (i.elbowType && elbowLibrary[i.elbowType]) elbowTypeSelect.value = i.elbowType;
+        if (i.lib11852 && fittingLibrary11852[i.lib11852]) lib11852Select.value = i.lib11852;
+        if (i.lib11851 && fittingLibrary11851[i.lib11851]) lib11851Select.value = i.lib11851;
+        if (i.lib32676 && fittingLibrary32676[i.lib32676]) lib32676Select.value = i.lib32676;
+
+        setControlValue("flow", i.q_l_h);
+        setControlValue("retention", i.t);
+        setControlValue("rho", i.rho);
+        setControlValue("mu", i.mu_mpa_s);
+        setControlValue("roughness", i.roughness_mm);
+        setControlValue("straightSeg", i.segment);
+        setControlValue("lossMethod", i.lossMethod);
+        setControlValue("kElbow", i.kElbow);
+        setControlValue("leqElbowLD", i.leqElbowLD);
+        setControlValue("cipMin", i.cipMin);
+        setControlValue("cipMax", i.cipMax);
+        setControlValue("targetSpeed", i.targetSpeed);
+        setControlValue("count11852", i.count11852);
+        setControlValue("k11852", i.k11852);
+        setControlValue("count11851", i.count11851);
+        setControlValue("k11851", i.k11851);
+        setControlValue("count32676", i.count32676);
+        setControlValue("k32676", i.k32676);
+
+        setControlValue("includeIO", i.includeIO);
+        setControlValue("use11852", i.use11852);
+        setControlValue("use11851", i.use11851);
+        setControlValue("use32676", i.use32676);
+
+        updateElbowFromLibrary();
+        update11852FromLibrary();
+        update11851FromLibrary();
+        update32676FromLibrary();
+
+        setControlValue("kElbow", i.kElbow);
+        setControlValue("leqElbowLD", i.leqElbowLD);
+        setControlValue("k11852", i.k11852);
+        setControlValue("k11851", i.k11851);
+        setControlValue("k32676", i.k32676);
+
+        updatePipeIdInfo();
+      } catch (_e) {
+      }
+    }
+
+    function resetAllFields() {
+      const proceed = window.confirm("Сигурен ли си, че искаш да върнеш всички полета към началните стойности?");
+      if (!proceed) return;
+      localStorage.removeItem("coilCalcData");
+      localStorage.removeItem("coilCalcUpdatedAt");
+      localStorage.removeItem(FORM_STATE_KEY);
+      window.location.reload();
+    }
+
     function recommendPipe(allProfiles, targetSpeed, cipMin, cipMax) {
       const withScore = allProfiles.map(p => ({
         ...p,
@@ -1365,6 +1511,8 @@
     }
 
     function calc() {
+      saveFormState();
+
       const q_l_h = parseFloat(document.getElementById("flow").value);
       const q = q_l_h / 1000 / 3600;
       const q_l_s = q_l_h / 3600;
@@ -1548,6 +1696,7 @@
           cipMax,
           targetSpeed,
           pipeStandard: pipeStandardSelect.value,
+          pipeSizeIndex: selectedIdx,
           selectedDN: p.dn,
           od_mm: p.od,
           wall_mm: p.t
@@ -1752,7 +1901,10 @@
       let timer = null;
       const scheduleCalc = () => {
         if (timer) clearTimeout(timer);
-        timer = setTimeout(() => calc(), 120);
+        timer = setTimeout(() => {
+          saveFormState();
+          calc();
+        }, 120);
       };
       recalcControls.forEach(control => {
         control.addEventListener("input", scheduleCalc);
@@ -1771,10 +1923,12 @@
     fillElbowLibrary();
     fillFittingLibraries();
     bindAutoRecalculation();
+    restoreInputsFromSession();
     pipeSizeSelect.addEventListener("change", updatePipeIdInfo);
     calcBtn.addEventListener("click", calc);
     exportWordBtn.addEventListener("click", () => exportProtocol("word"));
     exportPdfBtn.addEventListener("click", () => exportProtocol("pdf"));
+    resetAllBtn.addEventListener("click", resetAllFields);
     calc();
   </script>
 </body>
