@@ -1,357 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Калкулатор за тръбна задръжка (серпентина)</title>
-  <style>
-    :root {
-      --bg: #f4f7fb;
-      --card: #ffffff;
-      --text: #122033;
-      --muted: #4b5d76;
-      --accent: #2563eb;
-      --accent-soft: #dbeafe;
-      --ok: #0f766e;
-      --border: #d9e2ef;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-      color: var(--text);
-      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: clamp(12px, 2.2vw, 24px);
-    }
-
-    .header {
-      background: linear-gradient(120deg, #0f172a, #1d4ed8);
-      color: #fff;
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
-      margin-bottom: 18px;
-    }
-
-    .header h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-    }
-
-    .header p {
-      margin: 0;
-      opacity: 0.92;
-      line-height: 1.5;
-    }
-
-    .header-actions {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .header-link {
-      display: inline-block;
-      text-decoration: none;
-      background: rgba(255, 255, 255, 0.16);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .header-link:hover {
-      background: rgba(255, 255, 255, 0.24);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.05fr 1fr;
-      gap: 16px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
-    }
-
-    .card h2 {
-      margin-top: 0;
-      margin-bottom: 14px;
-      font-size: 18px;
-      color: #0b1b30;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    label {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 10px 11px;
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      font-size: 14px;
-      color: var(--text);
-      background: #fff;
-    }
-
-    input:focus, select:focus {
-      outline: 2px solid var(--accent-soft);
-      border-color: var(--accent);
-    }
-
-    .range-ok {
-      background: #ecfdf5;
-      border-color: #86efac;
-    }
-
-    .range-warn {
-      background: #fffbeb;
-      border-color: #fcd34d;
-    }
-
-    .range-out {
-      background: #fef2f2;
-      border-color: #fca5a5;
-    }
-
-    .inline {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .button-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 14px;
-    }
-
-    .button-row.secondary {
-      justify-content: flex-start;
-      gap: 8px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: 0;
-      background: var(--accent);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
-    }
-
-    button:hover { filter: brightness(1.05); }
-
-    button.ghost {
-      background: #1f2937;
-      box-shadow: none;
-    }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .metric {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff;
-    }
-
-    .metric.ok {
-      background: #ecfdf5;
-      border-color: #86efac;
-    }
-
-    .metric.warn {
-      background: #fffbeb;
-      border-color: #fcd34d;
-    }
-
-    .metric.out {
-      background: #fef2f2;
-      border-color: #fca5a5;
-    }
-
-    .metric .k {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .metric .v {
-      font-size: 24px;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1.2;
-      word-break: break-word;
-    }
-
-    .metric.small .v {
-      font-size: 19px;
-      font-weight: 700;
-    }
-
-    .formula-box {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      background: #fcfdff;
-      max-height: 360px;
-      overflow: auto;
-    }
-
-    .formula-box h3 {
-      margin: 0 0 10px;
-      font-size: 15px;
-      color: var(--ok);
-    }
-
-    .formula {
-      font-family: Consolas, "Courier New", monospace;
-      font-size: 13px;
-      line-height: 1.6;
-      padding: 6px 0;
-      border-bottom: 1px dashed #e7edf7;
-      white-space: pre-wrap;
-    }
-
-    .formula:last-child { border-bottom: 0; }
-
-    .section-title {
-      margin: 8px 0 8px;
-      font-size: 14px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .result-group {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px;
-      background: #fbfdff;
-      margin-bottom: 10px;
-    }
-
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      margin-top: 8px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      background: #fff;
-    }
-
-    th, td {
-      padding: 8px 10px;
-      border-bottom: 1px solid #e7edf7;
-      text-align: left;
-      white-space: normal;
-    }
-
-    th {
-      background: #f4f8ff;
-      color: #1d3557;
-      font-weight: 700;
-    }
-
-    .chart-box {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-      padding: 10px;
-    }
-
-    #speedChart {
-      width: 100%;
-      height: 250px;
-      display: block;
-    }
-
-    .note {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
-      background: #f8fbff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-    }
-
-    @media (max-width: 980px) {
-      .grid { grid-template-columns: 1fr; }
-      .form-row { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 700px) {
-      .header { padding: 16px; }
-      .header h1 { font-size: 22px; }
-      .card { padding: 12px; }
-      .metric .v { font-size: 20px; }
-      #speedChart { height: 220px; }
-      input, select, button { font-size: 16px; }
-    }
-
-    @media (max-width: 520px) {
-      .container { padding: 10px; }
-      .header-actions { gap: 6px; }
-      .header-link { width: 100%; text-align: center; }
-      .button-row,
-      .button-row.secondary { justify-content: stretch; }
-      .button-row button,
-      .button-row.secondary button { width: 100%; }
-      .metric .v { font-size: 18px; }
-      #speedChart { height: 200px; }
-    }
-  </style>
+  <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
   <div class="container">
@@ -366,133 +19,201 @@
       </div>
     </div>
 
+    <div class="app-nav" aria-label="Основна навигация">
+      <button class="nav-tab active" type="button" data-page="retention">Тръбни задръжки</button>
+      <button class="nav-tab" type="button" data-page="cip">CIP миене</button>
+      <button class="nav-tab" type="button" data-page="pumps">Избор на помпи</button>
+      <button class="nav-tab" type="button" data-page="routes">Тръбни трасета</button>
+      <button class="nav-tab" type="button" data-page="protocols">Протоколи</button>
+    </div>
+
+    <section class="page active" id="page-retention">
     <div class="grid">
       <div class="card">
         <h2>Входни данни</h2>
 
+        <details class="form-section" open>
+          <summary>Основни процесни данни</summary>
+          <div class="form-section-body">
         <div class="form-row">
           <div class="field">
-            <label for="flow">Дебит Q [L/h]</label>
+            <label for="flow" class="label-with-help">
+              <span>Дебит Q [L/h]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Входен продуктов дебит в литри за час. В сметките автоматично се преобразува към L/s и m³/s.">i</span>
+            </label>
             <input id="flow" type="number" min="1" step="1" value="5000" />
           </div>
           <div class="field">
-            <label for="retention">Целева задръжка t [s]</label>
+            <label for="retention" class="label-with-help">
+              <span>Целева задръжка t [s]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Технологично зададеното време на престой в серпентината. Заедно с дебита определя нужния обем.">i</span>
+            </label>
             <input id="retention" type="number" min="1" max="3600" step="1" value="60" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="pipeStandard">Серия тръби (DIN EN 10357)</label>
+            <label for="pipeStandard" class="label-with-help">
+              <span>Серия тръби (DIN EN 10357)</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира серията от каталога. Тя определя наличните OD и дебелини на стената.">i</span>
+            </label>
             <select id="pipeStandard"></select>
           </div>
           <div class="field">
-            <label for="pipeSize">DN на тръбопровода (OD × s)</label>
+            <label for="pipeSize" class="label-with-help">
+              <span>DN на тръбопровода (OD × s)</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира конкретния размер. Светлият отвор се смята като ID = OD - 2·s.">i</span>
+            </label>
             <select id="pipeSize"></select>
-            <div id="pipeIdInfo" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
+            <div id="pipeIdInfo" class="note compact-output"></div>
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="fluid">Продукт</label>
+            <label for="fluid" class="label-with-help">
+              <span>Продукт</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Изборът зарежда ориентировъчни плътност и вискозитет. При нужда може да се избере ръчно въвеждане.">i</span>
+            </label>
             <select id="fluid"></select>
           </div>
           <div class="field">
-            <label for="rho">Плътност ρ [kg/m³]</label>
+            <label for="rho" class="label-with-help">
+              <span>Плътност ρ [kg/m³]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Плътност на продукта. Участва в Reynolds, динамичното налягане и избора на помпа.">i</span>
+            </label>
             <input id="rho" type="number" min="800" max="1300" step="1" value="998" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="mu">Динамичен вискозитет μ [mPa·s]</label>
+            <label for="straightSeg" class="label-with-help">
+              <span>Права секция между U-обръщания [m]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина на един прав участък в серпентината. Използва се за определяне на броя прави секции, колена и габаритната визуализация.">i</span>
+            </label>
+            <input id="straightSeg" type="number" min="0.2" max="20" step="0.1" value="2" />
+          </div>
+          <div class="field">
+            <label for="inletOutletExtension" class="label-with-help">
+              <span>Удължение вход/изход след коляно [mm]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина вход/изход = права секция + 1 коляно + това удължение. Стойността може да се коригира според реалния монтаж.">i</span>
+            </label>
+            <input id="inletOutletExtension" type="number" min="0" max="2000" step="10" value="150" />
+          </div>
+        </div>
+          </div>
+        </details>
+
+        <details class="form-section" open>
+          <summary>Геометрия на серпентината и колена</summary>
+          <div class="form-section-body">
+        <div class="form-row">
+          <div class="field">
+            <label for="mu" class="label-with-help">
+              <span>Динамичен вискозитет μ [mPa·s]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Динамичен вискозитет на продукта. В сметките се преобразува към Pa·s и влияе на Reynolds и коефициента на триене.">i</span>
+            </label>
             <input id="mu" type="number" min="0.2" max="500" step="0.1" value="1" />
           </div>
           <div class="field">
-            <label for="roughness">Грапавост ε [mm]</label>
+            <label for="roughness" class="label-with-help">
+              <span>Грапавост ε [mm]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Диапазон за ε в калкулатора: min 0.0005 mm / max 0.1000 mm. За санитарни неръждаеми тръби обичайно е ниска стойност.">i</span>
+            </label>
             <input id="roughness" type="number" min="0.0005" max="0.1" step="0.0005" value="0.0015" />
-            <div class="note" style="margin-top:8px; padding:8px; font-size:12px;">
-              Диапазон за ε в калкулатора: min 0.0005 mm / max 0.1000 mm.
-            </div>
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="straightSeg">Права секция между U-обръщания [m]</label>
-            <input id="straightSeg" type="number" min="0.2" max="20" step="0.1" value="2" />
-          </div>
-          <div class="field">
-            <label for="lossMethod">Метод за загуби в колена</label>
+            <label for="lossMethod" class="label-with-help">
+              <span>Метод за загуби в колена</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Метод ζ използва локални K коефициенти. Метод Leq превръща колената и фитингите в еквивалентна дължина.">i</span>
+            </label>
             <select id="lossMethod">
               <option value="zeta">Метод ζ (локални коефициенти)</option>
               <option value="leq">Метод Leq (еквивалентна дължина)</option>
             </select>
           </div>
+          <div class="field">
+          </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="elbowType">Библиотека за коляно 90°</label>
+            <label for="elbowType" class="label-with-help">
+              <span>Библиотека за коляно 90°</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира каталожни или справочни стойности за K, L/D и радиус на коляното. При ръчен режим се ползват въведените стойности.">i</span>
+            </label>
             <select id="elbowType"></select>
-            <div id="elbowSourceInfo" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
+            <div id="elbowSourceInfo" class="note compact-output"></div>
           </div>
           <div class="field">
-            <label for="kElbow">Коефициент K за едно коляно 90°</label>
+            <label for="kElbow" class="label-with-help">
+              <span>Коефициент K за едно коляно 90°</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Диапазон за K(90°) в калкулатора: min 0.10 / max 2.00. Използва се при метод ζ.">i</span>
+            </label>
             <input id="kElbow" type="number" min="0.1" max="2" step="0.05" value="0.9" />
-            <div class="note" style="margin-top:8px; padding:8px; font-size:12px;">
-              Диапазон за K(90°) в калкулатора: min 0.10 / max 2.00.
-            </div>
+            <label class="inline">
+              <input id="manualElbowData" type="checkbox" />
+              <span>Използвай ръчно въведените K, L/D и R/D</span>
+            </label>
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label for="leqElbowLD">Еквивалентна дължина за 1 коляно (L/D)</label>
+            <label for="leqElbowLD" class="label-with-help">
+              <span>Еквивалентна дължина за 1 коляно (L/D)</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Използва се при метод Leq. Типичен диапазон: 20-60 за 90° колена според тип и стандарт.">i</span>
+            </label>
             <input id="leqElbowLD" type="number" min="5" max="120" step="1" value="30" />
-            <div class="note" style="margin-top:8px; padding:8px; font-size:12px;">
-              Използва се при метод Leq. Типичен диапазон: 20–60 за 90° колена (според тип и стандарт).
-            </div>
-          </div>
-          <div class="field"></div>
-        </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label for="cipMin">CIP минимална скорост [m/s]</label>
-            <input id="cipMin" type="number" min="0.5" max="3.0" step="0.1" value="1.5" />
           </div>
           <div class="field">
-            <label for="cipMax">CIP максимална скорост [m/s]</label>
-            <input id="cipMax" type="number" min="0.8" max="4.0" step="0.1" value="2.5" />
+            <label for="elbowRadiusD" class="label-with-help">
+              <span>Радиус на коляно R/D [-]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="За броя колена се отчита дължината по ос: Lколяно = π/2 · R/D · D. При DIN 11852 може да се използва табличен радиус по DN.">i</span>
+            </label>
+            <input id="elbowRadiusD" type="number" min="0.5" max="5" step="0.1" value="1.5" />
           </div>
         </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label for="targetSpeed">Търсена скорост vₜ [m/s]</label>
-            <input id="targetSpeed" type="number" min="0.3" max="4.0" step="0.1" value="2.0" />
           </div>
-          <div class="field"></div>
-        </div>
+        </details>
 
+        <details class="form-section">
+          <summary>Допълнителни фитинги и локални загуби</summary>
+          <div class="form-section-body">
         <div class="form-row">
           <div class="field">
             <label class="inline" style="margin-top:0;">
               <input id="use11852" type="checkbox" />
               <span>Добави тройници/колена DIN 11852</span>
             </label>
-            <label for="lib11852">Библиотека DIN 11852</label>
+            <label class="inline">
+              <input id="manual11852" type="checkbox" />
+              <span>Ръчно K за DIN 11852</span>
+            </label>
+            <label for="lib11852" class="label-with-help">
+              <span>Библиотека DIN 11852</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за санитарни фитинги DIN 11852. При отметка за ръчно K се взима стойността от полето K за 1 бр.">i</span>
+            </label>
             <select id="lib11852"></select>
             <div id="lib11852Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
             <div class="form-row" style="margin-bottom:0;">
               <div class="field">
-                <label for="count11852">Брой</label>
+                <label for="count11852" class="label-with-help">
+                  <span>Брой</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени допълнителни елементи DIN 11852. Участват само ако отметката за добавяне е включена.">i</span>
+                </label>
                 <input id="count11852" type="number" min="0" max="200" step="1" value="0" />
               </div>
               <div class="field">
-                <label for="k11852">K за 1 бр.</label>
+                <label for="k11852" class="label-with-help">
+                  <span>K за 1 бр.</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за един елемент. Ползва се при включен ръчен режим за DIN 11852.">i</span>
+                </label>
                 <input id="k11852" type="number" min="0.05" max="8" step="0.05" value="1.50" />
               </div>
             </div>
@@ -502,16 +223,29 @@
               <input id="use11851" type="checkbox" />
               <span>Добави резбови съединения DIN 11851</span>
             </label>
-            <label for="lib11851">Библиотека DIN 11851</label>
+            <label class="inline">
+              <input id="manual11851" type="checkbox" />
+              <span>Ръчно K за DIN 11851</span>
+            </label>
+            <label for="lib11851" class="label-with-help">
+              <span>Библиотека DIN 11851</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за резбови съединения DIN 11851. При ръчно K се взима стойността от полето K за 1 бр.">i</span>
+            </label>
             <select id="lib11851"></select>
             <div id="lib11851Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
             <div class="form-row" style="margin-bottom:0;">
               <div class="field">
-                <label for="count11851">Брой</label>
+                <label for="count11851" class="label-with-help">
+                  <span>Брой</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени резбови съединения DIN 11851. Участват само ако отметката за добавяне е включена.">i</span>
+                </label>
                 <input id="count11851" type="number" min="0" max="200" step="1" value="0" />
               </div>
               <div class="field">
-                <label for="k11851">K за 1 бр.</label>
+                <label for="k11851" class="label-with-help">
+                  <span>K за 1 бр.</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за едно резбово съединение. Ползва се при включен ръчен режим за DIN 11851.">i</span>
+                </label>
                 <input id="k11851" type="number" min="0.05" max="8" step="0.05" value="0.80" />
               </div>
             </div>
@@ -524,48 +258,62 @@
               <input id="use32676" type="checkbox" />
               <span>Добави клампови съединения DIN 32676</span>
             </label>
-            <label for="lib32676">Библиотека DIN 32676</label>
+            <label class="inline">
+              <input id="manual32676" type="checkbox" />
+              <span>Ръчно K за DIN 32676</span>
+            </label>
+            <label for="lib32676" class="label-with-help">
+              <span>Библиотека DIN 32676</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за клампови съединения DIN 32676. При ръчно K се взима стойността от полето K за 1 бр.">i</span>
+            </label>
             <select id="lib32676"></select>
             <div id="lib32676Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
             <div class="form-row" style="margin-bottom:0;">
               <div class="field">
-                <label for="count32676">Брой</label>
+                <label for="count32676" class="label-with-help">
+                  <span>Брой</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени клампови съединения DIN 32676. Участват само ако отметката за добавяне е включена.">i</span>
+                </label>
                 <input id="count32676" type="number" min="0" max="200" step="1" value="0" />
               </div>
               <div class="field">
-                <label for="k32676">K за 1 бр.</label>
+                <label for="k32676" class="label-with-help">
+                  <span>K за 1 бр.</span>
+                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за едно клампово съединение. Ползва се при включен ръчен режим за DIN 32676.">i</span>
+                </label>
                 <input id="k32676" type="number" min="0.05" max="8" step="0.05" value="0.20" />
               </div>
             </div>
           </div>
           <div class="field">
-            <div class="note" style="margin-top:28px; padding:8px; font-size:12px;">
-              Тези елементи са опционални. По подразбиране не участват в сметката.
-              При включване се добавят към локалните съпротивления и формулите.
+            <div class="compact-help">
+              <span>Допълнителни елементи</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Тези елементи са опционални. По подразбиране не участват в сметката. При включване се добавят към локалните съпротивления и формулите.">i</span>
             </div>
           </div>
         </div>
 
         <div class="inline">
           <input id="includeIO" type="checkbox" checked />
-          <label for="includeIO" style="margin:0;">Добави локални загуби вход/изход (общо K ≈ 1.5)</label>
+          <label for="includeIO" style="margin:0;" class="label-with-help">
+            <span>Добави локални загуби вход/изход (общо K ≈ 1.5)</span>
+            <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Включва ориентировъчни локални загуби за вход и изход на системата. Геометричната дължина вход/изход се смята отделно.">i</span>
+          </label>
         </div>
+          </div>
+        </details>
 
         <div class="button-row">
           <button id="calcBtn">Изчисли</button>
         </div>
 
         <div class="button-row secondary">
-          <button id="exportWordBtn" class="ghost">Протокол Word</button>
-          <button id="exportPdfBtn" class="ghost">Протокол PDF</button>
           <button id="resetAllBtn" class="ghost">Рестарт на полетата</button>
         </div>
 
-        <div class="note">
-          Размерите в каталога са типични за тръби за хранително-вкусова промишленост по DIN EN 10357
-          (серии A и D). Преди реализация потвърди актуалната серия, клас стомана и допустими дебелини
-          по твоята спецификация и каталога на доставчика. Локалните съпротивления за фитинги се сверяват
-          по проектни таблици и каталожни данни на производителя.
+        <div class="catalog-help">
+          <span>Каталожни данни</span>
+          <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Размерите в каталога са типични за тръби за хранително-вкусова промишленост по DIN EN 10357 (серии A и D). Преди реализация потвърди актуалната серия, клас стомана и допустими дебелини по твоята спецификация и каталога на доставчика. Локалните съпротивления за фитинги се сверяват по проектни таблици и каталожни данни на производителя.">i</span>
         </div>
       </div>
 
@@ -578,43 +326,264 @@
         </div>
 
         <div class="result-group">
-          <div class="section-title">Профили DN-2 / DN-1 / DN / DN+1 / DN+2</div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>DN</th>
-                  <th>ID [mm]</th>
-                  <th>v [m/s]</th>
-                  <th>Δp [bar]</th>
-                  <th>L [m]</th>
-                  <th>CIP статус</th>
-                </tr>
-              </thead>
-              <tbody id="profileTable"></tbody>
-            </table>
-          </div>
-          <div class="chart-box">
-            <canvas id="speedChart" width="520" height="250"></canvas>
-          </div>
-        </div>
-
-        <div class="result-group">
           <div class="section-title">Хидравлика и съпротивления</div>
           <div class="metrics" id="secondaryMetrics"></div>
         </div>
 
         <div class="result-group">
-          <div class="section-title">Препоръка за търсена скорост</div>
-          <div id="recommendationBox" class="note"></div>
+          <div class="section-title">Габаритна визуализация</div>
+          <div class="drawing-box" id="coilDrawing"></div>
+          <div class="drawing-note" id="coilDrawingNote"></div>
         </div>
 
-        <div class="formula-box">
-          <h3>Формули и стойности от изчислението</h3>
+        <details class="formula-box">
+          <summary>Формули и стойности от изчислението</summary>
           <div id="formulas"></div>
-        </div>
+        </details>
       </div>
     </div>
+    </section>
+
+    <section class="page" id="page-cip">
+      <div class="grid">
+        <div class="card">
+          <h2>CIP режим</h2>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipFlow">CIP дебит Q [L/h]</label>
+              <input id="cipFlow" type="number" min="1" step="100" value="5000" />
+            </div>
+            <div class="field">
+              <label for="cipDiameter">Вътрешен диаметър ID [mm]</label>
+              <input id="cipDiameter" type="number" min="5" step="0.1" value="22" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipRouteLength">Дължина на миещия кръг [m]</label>
+              <input id="cipRouteLength" type="number" min="0.1" step="0.5" value="35" />
+            </div>
+            <div class="field">
+              <label for="cipTotalK">Общо локални съпротивления ΣK [-]</label>
+              <input id="cipTotalK" type="number" min="0" step="0.1" value="12" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipRho">Плътност ρ [kg/m³]</label>
+              <input id="cipRho" type="number" min="800" max="1300" step="1" value="998" />
+            </div>
+            <div class="field">
+              <label for="cipMu">Вискозитет μ [mPa·s]</label>
+              <input id="cipMu" type="number" min="0.2" max="500" step="0.1" value="1" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipRoughness">Грапавост ε [mm]</label>
+              <input id="cipRoughness" type="number" min="0.0005" max="0.1" step="0.0005" value="0.0015" />
+            </div>
+            <div class="field">
+              <label for="targetSpeed">Търсена CIP скорост vₜ [m/s]</label>
+              <input id="targetSpeed" type="number" min="0.3" max="4.0" step="0.1" value="2.0" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipMin">CIP минимална скорост [m/s]</label>
+              <input id="cipMin" type="number" min="0.5" max="3.0" step="0.1" value="1.5" />
+            </div>
+            <div class="field">
+              <label for="cipMax">CIP максимална скорост [m/s]</label>
+              <input id="cipMax" type="number" min="0.8" max="4.0" step="0.1" value="2.5" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button id="cipCalcBtn" type="button">Изчисли CIP</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Резултати за CIP</h2>
+          <div class="metrics" id="cipMetrics"></div>
+          <div class="note" id="cipNote"></div>
+          <details class="result-group" open>
+            <summary><div class="section-title">Профили DN-2 / DN-1 / DN / DN+1 / DN+2</div></summary>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>DN</th>
+                    <th>ID [mm]</th>
+                    <th>v [m/s]</th>
+                    <th>Δp [bar]</th>
+                    <th>L [m]</th>
+                    <th>CIP статус</th>
+                  </tr>
+                </thead>
+                <tbody id="profileTable"></tbody>
+              </table>
+            </div>
+            <div class="chart-box">
+              <canvas id="speedChart" width="520" height="250"></canvas>
+            </div>
+          </details>
+          <div class="result-group">
+            <div class="section-title">Препоръка за търсена CIP скорост</div>
+            <div id="recommendationBox" class="note"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-pumps">
+      <div class="grid">
+        <div class="card">
+          <h2>Избор на помпа</h2>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpFlow">Работен дебит [L/h]</label>
+              <input id="pumpFlow" type="number" min="1" step="100" value="5000" />
+            </div>
+            <div class="field">
+              <label for="pumpDp">Необходим пад на налягане [bar]</label>
+              <input id="pumpDp" type="number" min="0" step="0.01" value="0.35" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpStaticHead">Статичен напор [m]</label>
+              <input id="pumpStaticHead" type="number" step="0.1" value="2" />
+            </div>
+            <div class="field">
+              <label for="pumpReserve">Резерв [%]</label>
+              <input id="pumpReserve" type="number" min="0" max="100" step="1" value="15" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpEfficiency">Ориентировъчен КПД [%]</label>
+              <input id="pumpEfficiency" type="number" min="10" max="90" step="1" value="55" />
+            </div>
+            <div class="field">
+              <label for="pumpRho">Плътност ρ [kg/m³]</label>
+              <input id="pumpRho" type="number" min="800" max="1300" step="1" value="1000" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button id="pumpCalcBtn" type="button">Изчисли помпа</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Препоръка</h2>
+          <div class="metrics" id="pumpMetrics"></div>
+          <div class="note" id="pumpNote"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-routes">
+      <div class="grid">
+        <div class="card">
+          <h2>Тръбно трасе</h2>
+          <div class="form-row">
+            <div class="field">
+              <label for="routeFlow">Дебит Q [L/h]</label>
+              <input id="routeFlow" type="number" min="1" step="100" value="5000" />
+            </div>
+            <div class="field">
+              <label for="routeDiameter">Вътрешен диаметър ID [mm]</label>
+              <input id="routeDiameter" type="number" min="5" step="0.1" value="22" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="routeLength">Права дължина [m]</label>
+              <input id="routeLength" type="number" min="0.1" step="0.5" value="20" />
+            </div>
+            <div class="field">
+              <label for="routeElbows">Колена 90° [бр.]</label>
+              <input id="routeElbows" type="number" min="0" step="1" value="6" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="routeValves">Вентили [бр.]</label>
+              <input id="routeValves" type="number" min="0" step="1" value="2" />
+            </div>
+            <div class="field">
+              <label for="routeTees">Тройници [бр.]</label>
+              <input id="routeTees" type="number" min="0" step="1" value="1" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="routeOtherK">Други локални ΣK [-]</label>
+              <input id="routeOtherK" type="number" min="0" step="0.1" value="0" />
+            </div>
+            <div class="field">
+              <label for="routeRoughness">Грапавост ε [mm]</label>
+              <input id="routeRoughness" type="number" min="0.0005" max="0.1" step="0.0005" value="0.0015" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="routeRho">Плътност ρ [kg/m³]</label>
+              <input id="routeRho" type="number" min="800" max="1300" step="1" value="998" />
+            </div>
+            <div class="field">
+              <label for="routeMu">Вискозитет μ [mPa·s]</label>
+              <input id="routeMu" type="number" min="0.2" max="500" step="0.1" value="1" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button id="routeCalcBtn" type="button">Изчисли трасе</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Резултати за трасе</h2>
+          <div class="metrics" id="routeMetrics"></div>
+          <div class="note" id="routeNote"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-protocols">
+      <div class="grid">
+        <div class="card">
+          <h2>Протоколи</h2>
+          <div class="result-group">
+            <div class="section-title">Включи в протокола</div>
+            <label class="inline">
+              <input id="protocolRetention" type="checkbox" checked />
+              <span>Тръбна задръжка със серпентина</span>
+            </label>
+            <label class="inline">
+              <input id="protocolCip" type="checkbox" />
+              <span>CIP миене</span>
+            </label>
+            <label class="inline">
+              <input id="protocolPumps" type="checkbox" />
+              <span>Избор на помпа</span>
+            </label>
+            <label class="inline">
+              <input id="protocolRoutes" type="checkbox" />
+              <span>Тръбно трасе</span>
+            </label>
+          </div>
+          <div class="button-row secondary">
+            <button id="exportWordBtn" class="ghost" type="button">Протокол Word</button>
+            <button id="exportPdfBtn" class="ghost" type="button">Протокол PDF</button>
+          </div>
+          <div class="note">
+            Протоколът се генерира от текущите стойности във всички раздели. Маркирай само сметките, които искаш да влязат в документа.
+          </div>
+        </div>
+        <div class="card">
+          <h2>Съдържание</h2>
+          <div id="protocolPreview" class="formula-box"></div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -622,1314 +591,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"></script>
   <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
 
-  <script>
-    const fluidDb = {
-      "Вода (20°C)": { rho: 998, mu: 1.0 },
-      "Мляко цяло (~20°C)": { rho: 1030, mu: 2.0 },
-      "Мляко обезмаслено (~20°C)": { rho: 1035, mu: 1.7 },
-      "Суроватка (~20°C)": { rho: 1025, mu: 1.3 },
-      "Сметана 20% (~20°C)": { rho: 1010, mu: 5.0 },
-      "Ръчно въвеждане": { rho: 1000, mu: 1.0 }
-    };
-
-    const pipeSeries = {
-      "DIN EN 10357, серия A (DIN 11850)": [
-        { dn: "DN10", od: 13.0, t: 1.5 },
-        { dn: "DN15", od: 19.0, t: 1.5 },
-        { dn: "DN20", od: 23.0, t: 1.5 },
-        { dn: "DN25", od: 29.0, t: 1.5 },
-        { dn: "DN32", od: 35.0, t: 1.5 },
-        { dn: "DN40", od: 41.0, t: 1.5 },
-        { dn: "DN50", od: 53.0, t: 1.5 },
-        { dn: "DN65", od: 70.0, t: 2.0 },
-        { dn: "DN80", od: 85.0, t: 2.0 },
-        { dn: "DN100", od: 104.0, t: 2.0 }
-      ],
-      "DIN EN 10357, серия D (ISO 2037)": [
-        { dn: "1\" (≈DN25)", od: 25.0, t: 1.2 },
-        { dn: "1 1/4\" (≈DN32)", od: 32.0, t: 1.2 },
-        { dn: "1 1/2\" (≈DN40)", od: 38.0, t: 1.2 },
-        { dn: "2\" (≈DN50)", od: 51.0, t: 1.2 },
-        { dn: "2 1/2\" (≈DN65)", od: 63.5, t: 1.6 },
-        { dn: "3\" (≈DN80)", od: 76.1, t: 1.6 },
-        { dn: "4\" (≈DN100)", od: 101.6, t: 2.0 }
-      ]
-    };
-
-    const elbowLibrary = {
-      "Crane TP-410 | 90° long radius welded (R/D≈1.5)": {
-        k: 0.45,
-        lOverD: 30,
-        source: "Crane TP-410 (референтни индустриални стойности)"
-      },
-      "Crane TP-410 | 90° short radius welded (R/D≈1.0)": {
-        k: 0.90,
-        lOverD: 50,
-        source: "Crane TP-410 (референтни индустриални стойности)"
-      },
-      "Idelchik | 90° smooth elbow (типично)": {
-        k: 0.60,
-        lOverD: 35,
-        source: "Idelchik handbook (типичен диапазон, уточнява се по геометрия)"
-      },
-      "Ръчно въвеждане": {
-        k: 0.90,
-        lOverD: 30,
-        source: "Потребителски вход"
-      }
-    };
-
-    const fittingLibrary11852 = {
-      "DIN 11852 | Гладко коляно/елемент (типично)": {
-        k: 1.20,
-        source: "Референтни локални съпротивления за санитарни фитинги (Crane/Idelchik, типичен диапазон)"
-      },
-      "DIN 11852 | По-консервативна стойност": {
-        k: 1.50,
-        source: "Консервативна проектна стойност при неизвестна геометрия/състояние"
-      },
-      "Ръчно въвеждане": {
-        k: 1.50,
-        source: "Потребителски вход"
-      }
-    };
-
-    const fittingLibrary11851 = {
-      "DIN 11851 | Резбово съединение (типично)": {
-        k: 0.80,
-        source: "Референтни локални съпротивления за резбови връзки (типична оценка)"
-      },
-      "DIN 11851 | По-консервативна стойност": {
-        k: 1.10,
-        source: "Консервативна проектна стойност при повишени локални загуби"
-      },
-      "Ръчно въвеждане": {
-        k: 0.80,
-        source: "Потребителски вход"
-      }
-    };
-
-    const fittingLibrary32676 = {
-      "DIN 32676 | Tri-clamp (типично)": {
-        k: 0.20,
-        source: "Референтни локални съпротивления за клампови връзки (типична оценка)"
-      },
-      "DIN 32676 | По-консервативна стойност": {
-        k: 0.35,
-        source: "Консервативна проектна стойност при по-неблагоприятни връзки"
-      },
-      "Ръчно въвеждане": {
-        k: 0.20,
-        source: "Потребителски вход"
-      }
-    };
-
-    const fluidSelect = document.getElementById("fluid");
-    const rhoInput = document.getElementById("rho");
-    const muInput = document.getElementById("mu");
-    const pipeStandardSelect = document.getElementById("pipeStandard");
-    const pipeSizeSelect = document.getElementById("pipeSize");
-    const elbowTypeSelect = document.getElementById("elbowType");
-    const elbowSourceInfo = document.getElementById("elbowSourceInfo");
-    const lib11852Select = document.getElementById("lib11852");
-    const lib11851Select = document.getElementById("lib11851");
-    const lib32676Select = document.getElementById("lib32676");
-    const lib11852Info = document.getElementById("lib11852Info");
-    const lib11851Info = document.getElementById("lib11851Info");
-    const lib32676Info = document.getElementById("lib32676Info");
-    const pipeIdInfo = document.getElementById("pipeIdInfo");
-    const calcBtn = document.getElementById("calcBtn");
-    const exportWordBtn = document.getElementById("exportWordBtn");
-    const exportPdfBtn = document.getElementById("exportPdfBtn");
-    const resetAllBtn = document.getElementById("resetAllBtn");
-    const profileTable = document.getElementById("profileTable");
-    const recommendationBox = document.getElementById("recommendationBox");
-    const FORM_STATE_KEY = "coilCalcFormState";
-    let lastProtocolData = null;
-    let lastFormulaLines = [];
-
-    function fmt(value, digits = 3) {
-      return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: digits, minimumFractionDigits: digits }) : "—";
-    }
-
-    function rangeTone(value, min, max) {
-      if (!Number.isFinite(value)) return "out";
-      if (value < min || value > max) return "out";
-      const span = max - min;
-      const lowWarn = min + 0.15 * span;
-      const highWarn = max - 0.15 * span;
-      if (value < lowWarn || value > highWarn) return "warn";
-      return "ok";
-    }
-
-    function applyRangeClass(el, tone) {
-      el.classList.remove("range-ok", "range-warn", "range-out");
-      el.classList.add(tone === "ok" ? "range-ok" : tone === "warn" ? "range-warn" : "range-out");
-    }
-
-    function updateInputBoundaryColors(values) {
-      applyRangeClass(document.getElementById("roughness"), rangeTone(values.roughness_mm, 0.0005, 0.1));
-      applyRangeClass(document.getElementById("kElbow"), rangeTone(values.kElbow, 0.1, 2.0));
-      applyRangeClass(document.getElementById("leqElbowLD"), rangeTone(values.leqElbowLD, 5, 120));
-      applyRangeClass(document.getElementById("targetSpeed"), rangeTone(values.targetSpeed, 0.3, 4.0));
-      applyRangeClass(document.getElementById("k11852"), rangeTone(values.k11852, 0.05, 8.0));
-      applyRangeClass(document.getElementById("k11851"), rangeTone(values.k11851, 0.05, 8.0));
-      applyRangeClass(document.getElementById("k32676"), rangeTone(values.k32676, 0.05, 8.0));
-    }
-
-    function fillFluids() {
-      Object.keys(fluidDb).forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        fluidSelect.appendChild(opt);
-      });
-      fluidSelect.value = "Вода (20°C)";
-      fluidSelect.addEventListener("change", () => {
-        const data = fluidDb[fluidSelect.value];
-        if (fluidSelect.value !== "Ръчно въвеждане") {
-          rhoInput.value = data.rho;
-          muInput.value = data.mu;
-        }
-      });
-    }
-
-    function fillStandards() {
-      Object.keys(pipeSeries).forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        pipeStandardSelect.appendChild(opt);
-      });
-
-      pipeStandardSelect.addEventListener("change", fillPipeSizes);
-      fillPipeSizes();
-    }
-
-    function fillElbowLibrary() {
-      Object.keys(elbowLibrary).forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        elbowTypeSelect.appendChild(opt);
-      });
-      elbowTypeSelect.value = "Crane TP-410 | 90° long radius welded (R/D≈1.5)";
-      updateElbowFromLibrary();
-      elbowTypeSelect.addEventListener("change", updateElbowFromLibrary);
-    }
-
-    function fillFittingLibraries() {
-      fillOneFittingLibrary(lib11852Select, fittingLibrary11852, "DIN 11852 | По-консервативна стойност", update11852FromLibrary);
-      fillOneFittingLibrary(lib11851Select, fittingLibrary11851, "DIN 11851 | Резбово съединение (типично)", update11851FromLibrary);
-      fillOneFittingLibrary(lib32676Select, fittingLibrary32676, "DIN 32676 | Tri-clamp (типично)", update32676FromLibrary);
-    }
-
-    function fillOneFittingLibrary(selectEl, library, defaultKey, onChangeFn) {
-      Object.keys(library).forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        selectEl.appendChild(opt);
-      });
-      selectEl.value = defaultKey;
-      onChangeFn();
-      selectEl.addEventListener("change", onChangeFn);
-    }
-
-    function update11852FromLibrary() {
-      const selected = fittingLibrary11852[lib11852Select.value];
-      if (!selected) return;
-      if (lib11852Select.value !== "Ръчно въвеждане") {
-        document.getElementById("k11852").value = selected.k;
-      }
-      lib11852Info.textContent = `Източник: ${selected.source}`;
-    }
-
-    function update11851FromLibrary() {
-      const selected = fittingLibrary11851[lib11851Select.value];
-      if (!selected) return;
-      if (lib11851Select.value !== "Ръчно въвеждане") {
-        document.getElementById("k11851").value = selected.k;
-      }
-      lib11851Info.textContent = `Източник: ${selected.source}`;
-    }
-
-    function update32676FromLibrary() {
-      const selected = fittingLibrary32676[lib32676Select.value];
-      if (!selected) return;
-      if (lib32676Select.value !== "Ръчно въвеждане") {
-        document.getElementById("k32676").value = selected.k;
-      }
-      lib32676Info.textContent = `Източник: ${selected.source}`;
-    }
-
-    function updateElbowFromLibrary() {
-      const selected = elbowLibrary[elbowTypeSelect.value];
-      if (!selected) return;
-      if (elbowTypeSelect.value !== "Ръчно въвеждане") {
-        document.getElementById("kElbow").value = selected.k;
-        document.getElementById("leqElbowLD").value = selected.lOverD;
-      }
-      elbowSourceInfo.textContent = `Източник: ${selected.source}`;
-    }
-
-    function fillPipeSizes() {
-      pipeSizeSelect.innerHTML = "";
-      const selected = pipeSeries[pipeStandardSelect.value];
-      selected.forEach((p, idx) => {
-        const id = p.od - 2 * p.t;
-        const opt = document.createElement("option");
-        opt.value = idx;
-        opt.textContent = `${p.dn} | ${p.od.toFixed(1)} × ${p.t.toFixed(1)} mm (ID≈${id.toFixed(1)} mm)`;
-        pipeSizeSelect.appendChild(opt);
-      });
-      pipeSizeSelect.selectedIndex = 2;
-      updatePipeIdInfo();
-    }
-
-    function updatePipeIdInfo() {
-      const p = pipeSeries[pipeStandardSelect.value][parseInt(pipeSizeSelect.value, 10)];
-      const id = p.od - 2 * p.t;
-      pipeIdInfo.textContent = `Избран DN: ${p.dn} | Светъл отвор (ID): ${id.toFixed(1)} mm`;
-    }
-
-    function frictionFactorTurbulent(re, eps, d) {
-      const rel = eps / d;
-      return 0.25 / Math.pow(Math.log10((rel / 3.7) + (5.74 / Math.pow(re, 0.9))), 2);
-    }
-
-    function frictionFactor(re, eps, d) {
-      if (re <= 0) return 0;
-      if (re < 2300) return 64 / re;
-      if (re >= 4000) return frictionFactorTurbulent(re, eps, d);
-
-      const fLam = 64 / re;
-      const fTurb = frictionFactorTurbulent(4000, eps, d);
-      const alpha = (re - 2300) / (4000 - 2300);
-      return fLam + alpha * (fTurb - fLam);
-    }
-
-    function calculateForPipe(pipe, inputs) {
-      const d_mm = pipe.od - 2 * pipe.t;
-      if (d_mm <= 0) return null;
-
-      const d = d_mm / 1000;
-      const area = Math.PI * Math.pow(d, 2) / 4;
-      const velocity = inputs.q / area;
-      const volume = inputs.q * inputs.t;
-      const volume_l = volume * 1000;
-      const volumePerMeter_l_m = area * 1000;
-      const retention_s_l = volume_l > 0 ? inputs.t / volume_l : 0;
-      const length = volume / area;
-
-      const nStraights = Math.max(1, Math.ceil(length / inputs.segment));
-      const nUTurns = Math.max(0, nStraights - 1);
-      const elbows90 = nUTurns * 2;
-
-      const re = (inputs.rho * velocity * d) / inputs.mu;
-      const f = frictionFactor(re, inputs.eps, d);
-
-      const kElbowsOnly = elbows90 * inputs.kElbow;
-      const kIO = inputs.includeIO ? 1.5 : 0;
-      const k11852 = inputs.use11852 ? inputs.count11852 * inputs.k11852 : 0;
-      const k11851 = inputs.use11851 ? inputs.count11851 * inputs.k11851 : 0;
-      const k32676 = inputs.use32676 ? inputs.count32676 * inputs.k32676 : 0;
-      const kExtras = k11852 + k11851 + k32676;
-      const kTotal = kElbowsOnly + kIO + kExtras;
-
-      const leqElbows = elbows90 * inputs.leqElbowLD * d;
-      const leqIO = (inputs.lossMethod === "leq" && inputs.includeIO && f > 0) ? (kIO / f) * d : 0;
-      const leqExtras = (inputs.lossMethod === "leq" && f > 0) ? (kExtras / f) * d : 0;
-
-      const dyn = inputs.rho * Math.pow(velocity, 2) / 2;
-      const dpLinear = f * (length / d) * dyn;
-      let dpElbows = 0;
-      let dpIO = 0;
-      let dpExtras = 0;
-      let dpLocal = 0;
-      let dpTotal = 0;
-      let lHydraulicTotal = length;
-
-      if (inputs.lossMethod === "leq") {
-        lHydraulicTotal = length + leqElbows + leqIO + leqExtras;
-        dpElbows = f * (leqElbows / d) * dyn;
-        dpIO = f * (leqIO / d) * dyn;
-        dpExtras = f * (leqExtras / d) * dyn;
-        dpLocal = dpElbows + dpIO + dpExtras;
-        dpTotal = f * (lHydraulicTotal / d) * dyn;
-      } else {
-        dpElbows = kElbowsOnly * dyn;
-        dpIO = kIO * dyn;
-        dpExtras = kExtras * dyn;
-        dpLocal = dpElbows + dpIO + dpExtras;
-        dpTotal = dpLinear + dpLocal;
-      }
-
-      return {
-        d_mm, d, area, velocity, volume, volume_l, volumePerMeter_l_m, retention_s_l, length,
-        elbows90, re, f, kElbowsOnly, kIO, k11852, k11851, k32676, kExtras, kTotal, leqElbows, leqIO, leqExtras, lHydraulicTotal,
-        dyn, dpLinear, dpElbows, dpIO, dpExtras, dpLocal, dpTotal,
-        dpLinearBar: dpLinear / 100000,
-        dpLocalBar: dpLocal / 100000,
-        dpTotalBar: dpTotal / 100000,
-        pipe
-      };
-    }
-
-    function cipStatus(velocity, cipMin, cipMax) {
-      if (velocity < cipMin) return "Под минимална";
-      if (velocity > cipMax) return "Над максимална";
-      return "В целеви диапазон";
-    }
-
-    function renderProfiles(profiles, cipMin, cipMax) {
-      profileTable.innerHTML = profiles.map(p => {
-        const status = cipStatus(p.velocity, cipMin, cipMax);
-        return `<tr>
-          <td>${p.pipe.dn}</td>
-          <td>${fmt(p.d_mm, 1)}</td>
-          <td>${fmt(p.velocity, 3)}</td>
-          <td>${fmt(p.dpTotalBar, 4)}</td>
-          <td>${fmt(p.length, 2)}</td>
-          <td>${status}</td>
-        </tr>`;
-      }).join("");
-    }
-
-    function drawSpeedChart(profiles, cipMin, cipMax) {
-      const canvas = document.getElementById("speedChart");
-      const ctx = canvas.getContext("2d");
-      const dpr = window.devicePixelRatio || 1;
-      const width = canvas.clientWidth || 520;
-      const height = canvas.clientHeight || 250;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
-
-      const margin = { left: 45, right: 15, top: 15, bottom: 35 };
-      const chartW = width - margin.left - margin.right;
-      const chartH = height - margin.top - margin.bottom;
-      const maxV = Math.max(cipMax * 1.2, ...profiles.map(p => p.velocity), 0.5);
-
-      const y = (val) => margin.top + chartH - (val / maxV) * chartH;
-
-      ctx.strokeStyle = "#94a3b8";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(margin.left, margin.top);
-      ctx.lineTo(margin.left, margin.top + chartH);
-      ctx.lineTo(margin.left + chartW, margin.top + chartH);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#16a34a";
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(margin.left, y(cipMin));
-      ctx.lineTo(margin.left + chartW, y(cipMin));
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(margin.left, y(cipMax));
-      ctx.lineTo(margin.left + chartW, y(cipMax));
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      const barW = chartW / (profiles.length * 1.8);
-      profiles.forEach((p, i) => {
-        const x = margin.left + (i + 1) * (chartW / (profiles.length + 1)) - barW / 2;
-        const barTop = y(p.velocity);
-        const color = (p.velocity >= cipMin && p.velocity <= cipMax) ? "#2563eb" : "#ef4444";
-        ctx.fillStyle = color;
-        ctx.fillRect(x, barTop, barW, margin.top + chartH - barTop);
-
-        ctx.fillStyle = "#1f2937";
-        ctx.font = "12px Segoe UI";
-        ctx.textAlign = "center";
-        ctx.fillText(p.pipe.dn, x + barW / 2, height - 12);
-        ctx.fillText(fmt(p.velocity, 2), x + barW / 2, Math.max(barTop - 6, 10));
-      });
-
-      ctx.fillStyle = "#0f172a";
-      ctx.font = "12px Segoe UI";
-      ctx.textAlign = "left";
-      ctx.fillText(`CIP min ${fmt(cipMin, 1)} m/s`, margin.left + 6, y(cipMin) - 4);
-      ctx.fillText(`CIP max ${fmt(cipMax, 1)} m/s`, margin.left + 6, y(cipMax) - 4);
-    }
-
-    function saveSessionData(payload) {
-      localStorage.setItem("coilCalcData", JSON.stringify(payload));
-      localStorage.setItem("coilCalcUpdatedAt", new Date().toISOString());
-    }
-
-    function setControlValue(id, value) {
-      const el = document.getElementById(id);
-      if (!el || value === undefined || value === null) return;
-      if (el.type === "checkbox") {
-        el.checked = Boolean(value);
-      } else {
-        el.value = value;
-      }
-    }
-
-    function getCurrentFormState() {
-      const ids = [
-        "flow", "retention", "fluid", "rho", "mu", "pipeStandard", "pipeSize", "roughness", "straightSeg",
-        "lossMethod", "elbowType", "kElbow", "leqElbowLD", "includeIO", "cipMin", "cipMax", "targetSpeed",
-        "use11852", "lib11852", "count11852", "k11852",
-        "use11851", "lib11851", "count11851", "k11851",
-        "use32676", "lib32676", "count32676", "k32676"
-      ];
-      const state = {};
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        state[id] = el.type === "checkbox" ? el.checked : el.value;
-      });
-      return state;
-    }
-
-    function saveFormState() {
-      localStorage.setItem(FORM_STATE_KEY, JSON.stringify(getCurrentFormState()));
-    }
-
-    function restoreInputsFromSession() {
-      const rawFormState = localStorage.getItem(FORM_STATE_KEY);
-      if (rawFormState) {
-        try {
-          const state = JSON.parse(rawFormState);
-          if (state.pipeStandard && pipeSeries[state.pipeStandard]) {
-            pipeStandardSelect.value = state.pipeStandard;
-            fillPipeSizes();
-          }
-          if (state.pipeSize !== undefined && state.pipeSize !== null) {
-            pipeSizeSelect.value = state.pipeSize;
-          }
-
-          [
-            "flow", "retention", "fluid", "rho", "mu", "roughness", "straightSeg", "lossMethod", "kElbow", "leqElbowLD",
-            "includeIO", "cipMin", "cipMax", "targetSpeed", "elbowType",
-            "use11852", "lib11852", "count11852", "k11852",
-            "use11851", "lib11851", "count11851", "k11851",
-            "use32676", "lib32676", "count32676", "k32676"
-          ].forEach(id => setControlValue(id, state[id]));
-
-          updateElbowFromLibrary();
-          update11852FromLibrary();
-          update11851FromLibrary();
-          update32676FromLibrary();
-
-          setControlValue("kElbow", state.kElbow);
-          setControlValue("k11852", state.k11852);
-          setControlValue("k11851", state.k11851);
-          setControlValue("k32676", state.k32676);
-
-          updatePipeIdInfo();
-          return;
-        } catch (_err) {
-        }
-      }
-
-      const raw = localStorage.getItem("coilCalcData");
-      if (!raw) return;
-
-      try {
-        const parsed = JSON.parse(raw);
-        const i = parsed?.inputs;
-        if (!i) return;
-
-        if (i.pipeStandard && pipeSeries[i.pipeStandard]) {
-          pipeStandardSelect.value = i.pipeStandard;
-          fillPipeSizes();
-        }
-
-        if (Number.isFinite(i.pipeSizeIndex)) {
-          const idx = Number(i.pipeSizeIndex);
-          if (idx >= 0 && idx < pipeSizeSelect.options.length) {
-            pipeSizeSelect.selectedIndex = idx;
-          }
-        }
-
-        if (i.fluid && fluidDb[i.fluid]) fluidSelect.value = i.fluid;
-        if (i.elbowType && elbowLibrary[i.elbowType]) elbowTypeSelect.value = i.elbowType;
-        if (i.lib11852 && fittingLibrary11852[i.lib11852]) lib11852Select.value = i.lib11852;
-        if (i.lib11851 && fittingLibrary11851[i.lib11851]) lib11851Select.value = i.lib11851;
-        if (i.lib32676 && fittingLibrary32676[i.lib32676]) lib32676Select.value = i.lib32676;
-
-        setControlValue("flow", i.q_l_h);
-        setControlValue("retention", i.t);
-        setControlValue("rho", i.rho);
-        setControlValue("mu", i.mu_mpa_s);
-        setControlValue("roughness", i.roughness_mm);
-        setControlValue("straightSeg", i.segment);
-        setControlValue("lossMethod", i.lossMethod);
-        setControlValue("kElbow", i.kElbow);
-        setControlValue("leqElbowLD", i.leqElbowLD);
-        setControlValue("cipMin", i.cipMin);
-        setControlValue("cipMax", i.cipMax);
-        setControlValue("targetSpeed", i.targetSpeed);
-        setControlValue("count11852", i.count11852);
-        setControlValue("k11852", i.k11852);
-        setControlValue("count11851", i.count11851);
-        setControlValue("k11851", i.k11851);
-        setControlValue("count32676", i.count32676);
-        setControlValue("k32676", i.k32676);
-
-        setControlValue("includeIO", i.includeIO);
-        setControlValue("use11852", i.use11852);
-        setControlValue("use11851", i.use11851);
-        setControlValue("use32676", i.use32676);
-
-        updateElbowFromLibrary();
-        update11852FromLibrary();
-        update11851FromLibrary();
-        update32676FromLibrary();
-
-        setControlValue("kElbow", i.kElbow);
-        setControlValue("leqElbowLD", i.leqElbowLD);
-        setControlValue("k11852", i.k11852);
-        setControlValue("k11851", i.k11851);
-        setControlValue("k32676", i.k32676);
-
-        updatePipeIdInfo();
-      } catch (_e) {
-      }
-    }
-
-    function resetAllFields() {
-      const proceed = window.confirm("Сигурен ли си, че искаш да върнеш всички полета към началните стойности?");
-      if (!proceed) return;
-      localStorage.removeItem("coilCalcData");
-      localStorage.removeItem("coilCalcUpdatedAt");
-      localStorage.removeItem(FORM_STATE_KEY);
-      window.location.reload();
-    }
-
-    function recommendPipe(allProfiles, targetSpeed, cipMin, cipMax) {
-      const withScore = allProfiles.map(p => ({
-        ...p,
-        speedError: Math.abs(p.velocity - targetSpeed),
-        inCip: p.velocity >= cipMin && p.velocity <= cipMax
-      }));
-
-      const cipCandidates = withScore.filter(p => p.inCip)
-        .sort((a, b) => (a.speedError - b.speedError) || (a.dpTotalBar - b.dpTotalBar));
-
-      if (cipCandidates.length > 0) {
-        return {
-          pick: cipCandidates[0],
-          mode: "cip"
-        };
-      }
-
-      const nearest = withScore.sort((a, b) => (a.speedError - b.speedError) || (a.dpTotalBar - b.dpTotalBar));
-      return {
-        pick: nearest[0],
-        mode: "nearest"
-      };
-    }
-
-    function renderRecommendation(rec, targetSpeed, cipMin, cipMax) {
-      const p = rec.pick;
-      if (!p) {
-        recommendationBox.textContent = "Няма валидни профили за препоръка.";
-        return;
-      }
-
-      const base = `Препоръчан размер: ${p.pipe.dn} (ID ${fmt(p.d_mm, 1)} mm), v = ${fmt(p.velocity, 3)} m/s, Δp = ${fmt(p.dpTotalBar, 4)} bar.`;
-      const reason = rec.mode === "cip"
-        ? `Изборът е в CIP диапазона ${fmt(cipMin, 1)}-${fmt(cipMax, 1)} m/s и е най-близо до търсената скорост ${fmt(targetSpeed, 2)} m/s.`
-        : `Няма профил в CIP диапазона ${fmt(cipMin, 1)}-${fmt(cipMax, 1)} m/s; избран е най-близкият до търсената скорост ${fmt(targetSpeed, 2)} m/s.`;
-      recommendationBox.textContent = `${base} ${reason}`;
-    }
-
-    function protocolSections(report) {
-      const process = [
-        ["Дебит на продукта", `${fmt(report.q_l_s, 4)} L/s`],
-        ["Общ обем на задръжката", `${fmt(report.volume_l,2)} L`],
-        ["Обем на тръбата", `${fmt(report.volumePerMeter_l_m,3)} L/m`],
-        ["Обща дължина", `${fmt(report.length_m,2)} m`],
-        ["Брой колена 90°", `${report.elbows90}`],
-        ["Общи загуби", `${fmt(report.dpTotal_bar,4)} bar`],
-        ["Скорост", `${fmt(report.velocity_m_s,3)} m/s`]
-      ];
-
-      const inputs = [
-        ["Дебит", `${fmt(report.q_l_h, 1)} L/h (${fmt(report.q_l_s, 4)} L/s)`],
-        ["Дебит (вътрешен за сметка)", `${fmt(report.q_m3_s, 6)} m³/s`],
-        ["Време на задръжка", `${fmt(report.t, 1)} s`],
-        ["Тръба", `${report.pipeStandard} | ${report.selectedDN} | OD ${fmt(report.od_mm,1)} mm | s ${fmt(report.wall_mm,1)} mm | ID ${fmt(report.id_mm,1)} mm`],
-        ["Плътност / вискозитет", `${fmt(report.rho,1)} kg/m³ / ${fmt(report.mu_mpa_s,3)} mPa·s`],
-        ["CIP диапазон", `${fmt(report.cipMin,2)} – ${fmt(report.cipMax,2)} m/s`],
-        ["Метод колена", `${report.lossMethod}`],
-        ["Коляно 90°", `${report.elbowType}; K=${fmt(report.kElbow,2)}; (L/D)=${fmt(report.leqElbowLD,1)}; вход/изход=${report.includeIO ? "Да" : "Не"}`],
-        ["DIN 11852", `${report.use11852 ? "Да" : "Не"}; брой=${fmt(report.count11852,0)}; K/бр=${fmt(report.k11852Single,2)}`],
-        ["DIN 11851", `${report.use11851 ? "Да" : "Не"}; брой=${fmt(report.count11851,0)}; K/бр=${fmt(report.k11851Single,2)}`],
-        ["DIN 32676", `${report.use32676 ? "Да" : "Не"}; брой=${fmt(report.count32676,0)}; K/бр=${fmt(report.k32676Single,2)}`],
-        ["Избор DIN 11852", `${report.lib11852}`],
-        ["Избор DIN 11851", `${report.lib11851}`],
-        ["Избор DIN 32676", `${report.lib32676}`]
-      ];
-
-      const results = [
-        ["Общ обем на задръжката", `${fmt(report.volume_l,2)} L`],
-        ["Обем на задръжката", `${fmt(report.volume_m3,6)} m³`],
-        ["Обем на 1 m тръба", `${fmt(report.volumePerMeter_l_m,3)} L/m`],
-        ["Площ на сечение", `${fmt(report.area_m2,6)} m²`],
-        ["Обща дължина", `${fmt(report.length_m,2)} m`],
-        ["Хидравлична дължина Lобщо", `${fmt(report.lHydraulicTotal_m,3)} m`],
-        ["Брой колена 90°", `${report.elbows90}`],
-        ["Скорост", `${fmt(report.velocity_m_s,3)} m/s`],
-        ["Уделна задръжка", `${fmt(report.retention_s_l,3)} s/L`],
-        ["Re / f", `${fmt(report.re,0)} / ${fmt(report.f,5)}`],
-        ["ΣK / Kколена / Kвх-изх", `${fmt(report.kTotal,3)} / ${fmt(report.kElbowsOnly,3)} / ${fmt(report.kIO,3)}`],
-        ["Leq колена / Leq вх-изх", `${fmt(report.leqElbows_m,3)} m / ${fmt(report.leqIO_m,3)} m`],
-        ["Leq доп. фитинги", `${fmt(report.leqExtras_m,3)} m`],
-        ["Динамично налягане ρv²/2", `${fmt(report.dynamicPa,2)} Pa`],
-        ["Общ пад на налягане", `${fmt(report.dpTotal_pa,2)} Pa | ${fmt(report.dpTotal_kpa,2)} kPa | ${fmt(report.dpTotal_bar,4)} bar`],
-        ["Линейни загуби", `${fmt(report.dpLinear_kpa,2)} kPa`],
-        ["Загуби в колена", `${fmt(report.dpElbows_kpa,2)} kPa`],
-        ["Загуби вход/изход", `${fmt(report.dpIO_kpa,2)} kPa`],
-        ["Загуби доп. фитинги", `${fmt(report.dpExtras_kpa,2)} kPa`],
-        ["Локални загуби общо", `${fmt(report.dpLocal_kpa,2)} kPa`],
-        ["Препоръчан DN", `${report.recDN} | v=${fmt(report.recV,3)} m/s | Δp=${fmt(report.recDp,4)} bar`]
-      ];
-
-      return { process, inputs, results, formulas: report.formulas || [] };
-    }
-
-    function downloadBlob(blob, filename) {
-      if (window.saveAs) {
-        window.saveAs(blob, filename);
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function dataUrlToUint8Array(dataUrl) {
-      const base64 = dataUrl.split(",")[1] || "";
-      const raw = atob(base64);
-      const array = new Uint8Array(raw.length);
-      for (let idx = 0; idx < raw.length; idx += 1) array[idx] = raw.charCodeAt(idx);
-      return array;
-    }
-
-    async function exportWordProtocol(report, fileBase) {
-      if (!window.docx) {
-        alert("Липсва библиотека за Word експорт.");
-        return;
-      }
-
-      const {
-        Document,
-        Packer,
-        Paragraph,
-        TextRun,
-        HeadingLevel,
-        AlignmentType,
-        Table,
-        TableRow,
-        TableCell,
-        ImageRun,
-        WidthType
-      } = window.docx;
-
-      const sections = protocolSections(report);
-      const processRows = sections.process.map(([k, v]) => new TableRow({
-        children: [
-          new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }),
-          new TableCell({ width: { size: 58, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: v, bold: true, size: 24 })] })] })
-        ]
-      }));
-
-      const pairRows = sections.inputs.concat(sections.results).map(([k, v]) => new TableRow({
-        children: [
-          new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }),
-          new TableCell({ width: { size: 58, type: WidthType.PERCENTAGE }, children: [new Paragraph(v)] })
-        ]
-      }));
-
-      const profileRows = [
-        new TableRow({ children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "DN", bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ID [mm]", bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "v [m/s]", bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Δp [bar]", bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "L [m]", bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CIP", bold: true })] })] })
-        ]})
-      ].concat(report.profiles.map(p => new TableRow({ children: [
-        new TableCell({ children: [new Paragraph(p.dn)] }),
-        new TableCell({ children: [new Paragraph(fmt(p.id_mm, 1))] }),
-        new TableCell({ children: [new Paragraph(fmt(p.velocity, 3))] }),
-        new TableCell({ children: [new Paragraph(fmt(p.dpBar, 4))] }),
-        new TableCell({ children: [new Paragraph(fmt(p.length, 2))] }),
-        new TableCell({ children: [new Paragraph(p.cip)] })
-      ]})));
-
-      const formulaParagraphs = sections.formulas.slice(0, 20).map((line, idx) =>
-        new Paragraph({ text: `${idx + 1}. ${line.replace(/\n/g, " ")}` })
-      );
-
-      const chartBlock = report.chartDataUrl
-        ? [
-            new Paragraph({ text: "3) Графика на скорости (CIP)", heading: HeadingLevel.HEADING_2 }),
-            new Paragraph({
-              children: [
-                new ImageRun({
-                  data: dataUrlToUint8Array(report.chartDataUrl),
-                  transformation: { width: 560, height: 260 }
-                })
-              ]
-            }),
-            new Paragraph({ text: "" })
-          ]
-        : [];
-
-      const doc = new Document({
-        sections: [{
-          properties: {},
-          children: [
-            new Paragraph({ text: "ПРОТОКОЛ ЗА ПРЕСМЯТАНЕ НА ТРЪБНА ЗАДРЪЖКА (СЕРПЕНТИНА)", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.LEFT }),
-            new Paragraph({ text: `Дата: ${report.date} | Метод: ${report.lossMethod} | Продукт: ${report.fluid}` }),
-            new Paragraph({ text: "" }),
-            new Paragraph({ text: "1) Процесни стойности", heading: HeadingLevel.HEADING_2 }),
-            new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: processRows }),
-            new Paragraph({ text: "" }),
-            new Paragraph({ text: "2) Детайлни резултати и входни данни", heading: HeadingLevel.HEADING_2 }),
-            new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: pairRows }),
-            new Paragraph({ text: "" }),
-            new Paragraph({ text: "3) Профили DN ±2", heading: HeadingLevel.HEADING_2 }),
-            new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: profileRows }),
-            new Paragraph({ text: "" }),
-            ...chartBlock,
-            new Paragraph({ text: "4) Разчетни формули (резюме)", heading: HeadingLevel.HEADING_2 }),
-            ...formulaParagraphs,
-            new Paragraph({ text: "" }),
-            new Paragraph({ text: "Бележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт." })
-          ]
-        }]
-      });
-
-      const blob = await Packer.toBlob(doc);
-      downloadBlob(blob, `${fileBase}.docx`);
-    }
-
-    function exportPdfProtocol(report, fileBase) {
-      if (!window.pdfMake) {
-        alert("Липсва библиотека за PDF експорт.");
-        return;
-      }
-
-      const sections = protocolSections(report);
-      const formulaList = sections.formulas.slice(0, 20).map((line, idx) => `${idx + 1}. ${line.replace(/\n/g, " ")}`);
-      const content = [
-        { text: "ПРОТОКОЛ ЗА ПРЕСМЯТАНЕ НА ТРЪБНА ЗАДРЪЖКА (СЕРПЕНТИНА)", style: "header" },
-        { text: `Дата: ${report.date} | Метод: ${report.lossMethod} | Продукт: ${report.fluid}`, style: "subheader" },
-        { text: "\n1) Процесни стойности", style: "section" },
-        {
-          table: {
-            widths: ["42%", "58%"],
-            body: [[{ text: "Показател", style: "th" }, { text: "Стойност", style: "th" }]].concat(sections.process.map(([k, v]) => [{ text: k, style: "tdKey" }, { text: v, style: "tdEmph" }]))
-          },
-          layout: "lightHorizontalLines"
-        },
-        { text: "\n2) Входни данни", style: "section" },
-        {
-          table: {
-            widths: ["42%", "58%"],
-            body: [[{ text: "Параметър", style: "th" }, { text: "Стойност", style: "th" }]].concat(sections.inputs.map(([k, v]) => [{ text: k, style: "tdKey" }, { text: v, style: "td" }]))
-          },
-          layout: "lightHorizontalLines"
-        },
-        { text: "\n3) Детайлни резултати", style: "section" },
-        {
-          table: {
-            widths: ["42%", "58%"],
-            body: [[{ text: "Параметър", style: "th" }, { text: "Стойност", style: "th" }]].concat(sections.results.map(([k, v]) => [{ text: k, style: "tdKey" }, { text: v, style: "td" }]))
-          },
-          layout: "lightHorizontalLines"
-        },
-        { text: "\n4) Профили DN ±2", style: "section" },
-        {
-          table: {
-            headerRows: 1,
-            widths: ["14%", "14%", "14%", "14%", "14%", "30%"],
-            body: [["DN", "ID [mm]", "v [m/s]", "Δp [bar]", "L [m]", "CIP"]]
-              .concat(report.profiles.map(p => [p.dn, fmt(p.id_mm, 1), fmt(p.velocity, 3), fmt(p.dpBar, 4), fmt(p.length, 2), p.cip]))
-          },
-          layout: "lightHorizontalLines"
-        },
-        { text: "\n5) Графика на скорости (CIP)", style: "section" },
-        report.chartDataUrl ? { image: report.chartDataUrl, width: 500, margin: [0, 4, 0, 4] } : { text: "Няма налична графика.", style: "td" },
-        { text: "\n6) Разчетни формули (резюме)", style: "section" },
-        { ol: formulaList, fontSize: 8.5 },
-        { text: "\nБележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт.", style: "foot" }
-      ];
-
-      const docDefinition = {
-        pageSize: "A4",
-        pageMargins: [28, 28, 28, 28],
-        content,
-        defaultStyle: { font: "Roboto", fontSize: 9, color: "#122033" },
-        styles: {
-          header: { fontSize: 13, bold: true, color: "#0f172a" },
-          subheader: { fontSize: 9, color: "#4b5d76" },
-          section: { fontSize: 11, bold: true, color: "#153b73" },
-          th: { bold: true, fillColor: "#eaf1ff", color: "#153b73" },
-          tdKey: { bold: true },
-          tdEmph: { bold: true, fontSize: 10, color: "#0f172a" },
-          td: {},
-          foot: { fontSize: 8, color: "#4b5d76" }
-        }
-      };
-
-      window.pdfMake.createPdf(docDefinition).download(`${fileBase}.pdf`);
-    }
-
-    async function exportProtocol(format) {
-      if (!lastProtocolData) {
-        alert("Няма изчислени данни. Натисни 'Изчисли' преди генериране на протокол.");
-        return;
-      }
-
-      const fileBase = `protokol_trubna_zadrujka_${new Date().toISOString().slice(0, 10)}`;
-
-      if (format === "word") {
-        await exportWordProtocol(lastProtocolData, fileBase);
-        return;
-      }
-      exportPdfProtocol(lastProtocolData, fileBase);
-    }
-
-    function calc() {
-      saveFormState();
-
-      const q_l_h = parseFloat(document.getElementById("flow").value);
-      const q = q_l_h / 1000 / 3600;
-      const q_l_s = q_l_h / 3600;
-      const t = parseFloat(document.getElementById("retention").value);
-      const rho = parseFloat(rhoInput.value);
-      const mu_mpa_s = parseFloat(muInput.value);
-      const mu = mu_mpa_s / 1000;
-      const roughness_mm = parseFloat(document.getElementById("roughness").value);
-      const eps = roughness_mm / 1000;
-      const segment = parseFloat(document.getElementById("straightSeg").value);
-      const lossMethod = document.getElementById("lossMethod").value;
-      const kElbow = parseFloat(document.getElementById("kElbow").value);
-      const leqElbowLD = parseFloat(document.getElementById("leqElbowLD").value);
-      const includeIO = document.getElementById("includeIO").checked;
-      const use11852 = document.getElementById("use11852").checked;
-      const count11852 = parseFloat(document.getElementById("count11852").value) || 0;
-      const k11852 = parseFloat(document.getElementById("k11852").value);
-      const lib11852 = lib11852Select.value;
-      const use11851 = document.getElementById("use11851").checked;
-      const count11851 = parseFloat(document.getElementById("count11851").value) || 0;
-      const k11851 = parseFloat(document.getElementById("k11851").value);
-      const lib11851 = lib11851Select.value;
-      const use32676 = document.getElementById("use32676").checked;
-      const count32676 = parseFloat(document.getElementById("count32676").value) || 0;
-      const k32676 = parseFloat(document.getElementById("k32676").value);
-      const lib32676 = lib32676Select.value;
-      const cipMin = parseFloat(document.getElementById("cipMin").value);
-      const cipMax = parseFloat(document.getElementById("cipMax").value);
-      const targetSpeed = parseFloat(document.getElementById("targetSpeed").value);
-
-      updateInputBoundaryColors({ roughness_mm, kElbow, leqElbowLD, targetSpeed, k11852, k11851, k32676 });
-
-      if (cipMin >= cipMax) {
-        alert("CIP минимална скорост трябва да е по-малка от максималната.");
-        return;
-      }
-
-      if (targetSpeed <= 0) {
-        alert("Търсената скорост трябва да е положителна.");
-        return;
-      }
-
-      const inputs = {
-        q, t, rho, mu, eps, segment, lossMethod, kElbow, leqElbowLD, includeIO,
-        use11852, count11852, k11852,
-        use11851, count11851, k11851,
-        use32676, count32676, k32676
-      };
-
-      const selectedSeries = pipeSeries[pipeStandardSelect.value];
-      const selectedIdx = parseInt(pipeSizeSelect.value, 10);
-      const p = selectedSeries[selectedIdx];
-      const main = calculateForPipe(p, inputs);
-      if (!main) {
-        alert("Невалиден вътрешен диаметър. Провери OD и дебелината.");
-        return;
-      }
-
-      const profileIndexes = [selectedIdx - 2, selectedIdx - 1, selectedIdx, selectedIdx + 1, selectedIdx + 2]
-        .filter(i => i >= 0 && i < selectedSeries.length);
-      const profiles = profileIndexes.map(i => calculateForPipe(selectedSeries[i], inputs)).filter(Boolean);
-      const allProfiles = selectedSeries.map(pipe => calculateForPipe(pipe, inputs)).filter(Boolean);
-      const recommendation = recommendPipe(allProfiles, targetSpeed, cipMin, cipMax);
-
-      renderMetrics({
-        q_l_s,
-        volume_l: main.volume_l,
-        volumePerMeter_l_m: main.volumePerMeter_l_m,
-        retention_s_l: main.retention_s_l,
-        length: main.length,
-        elbows90: main.elbows90,
-        kTotal: main.kTotal,
-        kExtras: main.kExtras,
-        method: lossMethod,
-        velocity: main.velocity,
-        re: main.re,
-        f: main.f,
-        dpLinear: main.dpLinear,
-        dpElbows: main.dpElbows,
-        dpIO: main.dpIO,
-        dpExtras: main.dpExtras,
-        dpLocal: main.dpLocal,
-        dpTotal: main.dpTotal,
-        dpTotalBar: main.dpTotalBar,
-        d_mm: main.d_mm,
-        cipStatus: cipStatus(main.velocity, cipMin, cipMax),
-        cipTone: rangeTone(main.velocity, cipMin, cipMax),
-        kTone: rangeTone(kElbow, 0.1, 2.0),
-        epsTone: rangeTone(roughness_mm, 0.0005, 0.1),
-        leqTone: rangeTone(leqElbowLD, 5, 120),
-        extrasTone: rangeTone(main.kExtras, 0, 20)
-      });
-
-      renderProfiles(profiles, cipMin, cipMax);
-      drawSpeedChart(profiles, cipMin, cipMax);
-      renderRecommendation(recommendation, targetSpeed, cipMin, cipMax);
-
-      renderFormulas({
-        q_l_h, q_l_s, q, t, rho, mu_mpa_s, mu,
-        d_mm: main.d_mm,
-        d: main.d,
-        area: main.area,
-        velocity: main.velocity,
-        volume: main.volume,
-        volume_l: main.volume_l,
-        volumePerMeter_l_m: main.volumePerMeter_l_m,
-        retention_s_l: main.retention_s_l,
-        length: main.length,
-        re: main.re,
-        f: main.f,
-        lossMethod,
-        leqElbowLD,
-        kElbow,
-        elbows90: main.elbows90,
-        kElbowsOnly: main.kElbowsOnly,
-        kIO: main.kIO,
-        k11852,
-        count11852,
-        use11852,
-        k11851,
-        count11851,
-        use11851,
-        k32676,
-        count32676,
-        use32676,
-        k11852Total: main.k11852,
-        k11851Total: main.k11851,
-        k32676Total: main.k32676,
-        kExtras: main.kExtras,
-        kTotal: main.kTotal,
-        leqElbows: main.leqElbows,
-        leqIO: main.leqIO,
-        leqExtras: main.leqExtras,
-        lHydraulicTotal: main.lHydraulicTotal,
-        dyn: main.dyn,
-        dpLinear: main.dpLinear,
-        dpElbows: main.dpElbows,
-        dpIO: main.dpIO,
-        dpExtras: main.dpExtras,
-        dpLocal: main.dpLocal,
-        dpTotal: main.dpTotal,
-        dpTotalBar: main.dpTotalBar,
-        eps,
-        roughness_mm,
-        includeIO,
-        od: p.od,
-        wall: p.t,
-        cipMin,
-        cipMax,
-        cipStatus: cipStatus(main.velocity, cipMin, cipMax)
-      });
-
-      saveSessionData({
-        inputs: {
-          fluid: fluidSelect.value,
-          q_l_h,
-          t,
-          rho,
-          mu_mpa_s,
-          roughness_mm,
-          segment,
-          lossMethod,
-          kElbow,
-          leqElbowLD,
-          elbowType: elbowTypeSelect.value,
-          elbowSource: elbowLibrary[elbowTypeSelect.value]?.source || "",
-          includeIO,
-          use11852,
-          lib11852,
-          count11852,
-          k11852,
-          use11851,
-          lib11851,
-          count11851,
-          k11851,
-          use32676,
-          lib32676,
-          count32676,
-          k32676,
-          cipMin,
-          cipMax,
-          targetSpeed,
-          pipeStandard: pipeStandardSelect.value,
-          pipeSizeIndex: selectedIdx,
-          selectedDN: p.dn,
-          od_mm: p.od,
-          wall_mm: p.t
-        },
-        results: {
-          q_l_s,
-          q_m3_s: q,
-          id_mm: main.d_mm,
-          area_m2: main.area,
-          volume_m3: main.volume,
-          volume_l: main.volume_l,
-          volumePerMeter_l_m: main.volumePerMeter_l_m,
-          retention_s_l: main.retention_s_l,
-          length_m: main.length,
-          velocity_m_s: main.velocity,
-          re: main.re,
-          f: main.f,
-          elbows90: main.elbows90,
-          kElbowsOnly: main.kElbowsOnly,
-          kIO: main.kIO,
-          k11852: main.k11852,
-          k11851: main.k11851,
-          k32676: main.k32676,
-          kExtras: main.kExtras,
-          kTotal: main.kTotal,
-          leqElbows_m: main.leqElbows,
-          leqIO_m: main.leqIO,
-          leqExtras_m: main.leqExtras,
-          lHydraulicTotal_m: main.lHydraulicTotal,
-          dpLinear_pa: main.dpLinear,
-          dpElbows_pa: main.dpElbows,
-          dpIO_pa: main.dpIO,
-          dpExtras_pa: main.dpExtras,
-          dpLocal_pa: main.dpLocal,
-          dpTotal_pa: main.dpTotal,
-          dpTotal_bar: main.dpTotalBar,
-          recommendationDN: recommendation?.pick?.pipe?.dn || "",
-          recommendationID_mm: recommendation?.pick?.d_mm || 0,
-          recommendationVelocity_m_s: recommendation?.pick?.velocity || 0,
-          recommendationDp_bar: recommendation?.pick?.dpTotalBar || 0,
-          recommendationMode: recommendation?.mode || ""
-        }
-      });
-
-      lastProtocolData = {
-        date: new Date().toLocaleString("bg-BG"),
-        fluid: fluidSelect.value,
-        q_l_h,
-        q_l_s,
-        q_m3_s: q,
-        t,
-        pipeStandard: pipeStandardSelect.value,
-        selectedDN: p.dn,
-        od_mm: p.od,
-        wall_mm: p.t,
-        id_mm: main.d_mm,
-        area_m2: main.area,
-        rho,
-        mu_mpa_s,
-        cipMin,
-        cipMax,
-        elbowType: elbowTypeSelect.value,
-        kElbow,
-        leqElbowLD,
-        lossMethod: lossMethod === "leq" ? "Leq (еквивалентна дължина)" : "ζ (локални коефициенти)",
-        volume_l: main.volume_l,
-        volumePerMeter_l_m: main.volumePerMeter_l_m,
-        retention_s_l: main.retention_s_l,
-        length_m: main.length,
-        elbows90: main.elbows90,
-        velocity_m_s: main.velocity,
-        dynamicPa: main.dyn,
-        re: main.re,
-        f: main.f,
-        kTotal: main.kTotal,
-        kElbowsOnly: main.kElbowsOnly,
-        kIO: main.kIO,
-        k11852: main.k11852,
-        k11851: main.k11851,
-        k32676: main.k32676,
-        kExtras: main.kExtras,
-        leqElbows_m: main.leqElbows,
-        leqIO_m: main.leqIO,
-        leqExtras_m: main.leqExtras,
-        volume_m3: main.volume,
-        lHydraulicTotal_m: main.lHydraulicTotal,
-        includeIO,
-        use11852,
-        lib11852,
-        count11852,
-        k11852Single: k11852,
-        use11851,
-        lib11851,
-        count11851,
-        k11851Single: k11851,
-        use32676,
-        lib32676,
-        count32676,
-        k32676Single: k32676,
-        dpLinear_kpa: main.dpLinear / 1000,
-        dpElbows_kpa: main.dpElbows / 1000,
-        dpIO_kpa: main.dpIO / 1000,
-        dpExtras_kpa: main.dpExtras / 1000,
-        dpLocal_kpa: main.dpLocal / 1000,
-        dpTotal_pa: main.dpTotal,
-        dpTotal_kpa: main.dpTotal / 1000,
-        dpTotal_bar: main.dpTotalBar,
-        recDN: recommendation?.pick?.pipe?.dn || "-",
-        recV: recommendation?.pick?.velocity || 0,
-        recDp: recommendation?.pick?.dpTotalBar || 0,
-        chartDataUrl: document.getElementById("speedChart")?.toDataURL("image/png") || "",
-        formulas: [...lastFormulaLines],
-        profiles: profiles.map(pr => ({
-          dn: pr.pipe.dn,
-          id_mm: pr.d_mm,
-          velocity: pr.velocity,
-          dpBar: pr.dpTotalBar,
-          length: pr.length,
-          cip: cipStatus(pr.velocity, cipMin, cipMax)
-        }))
-      };
-    }
-
-    function metric(k, v, cls = "", tone = "") {
-      return `<div class="metric ${cls} ${tone}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
-    }
-
-    function renderMetrics(r) {
-      const primary = document.getElementById("primaryMetrics");
-      const secondary = document.getElementById("secondaryMetrics");
-
-      primary.innerHTML = [
-        metric("Дебит на продукта [L/s]", fmt(r.q_l_s, 3)),
-        metric("Общ обем на задръжката [L]", fmt(r.volume_l, 2)),
-        metric("Обем на тръбата [L/m]", fmt(r.volumePerMeter_l_m, 3)),
-        metric("Обща дължина на тръбната задръжка [m]", fmt(r.length, 2)),
-        metric("Брой колена 90°", r.elbows90.toString()),
-        metric("Общи загуби Δp [bar]", fmt(r.dpTotalBar, 4)),
-        metric("Скорост v [m/s]", fmt(r.velocity, 3), "", r.cipTone)
-      ].join("");
-
-      secondary.innerHTML = [
-        metric("Задръжка t/V [s/L]", fmt(r.retention_s_l, 3), "small"),
-        metric("Светъл отвор ID [mm]", fmt(r.d_mm, 1), "small"),
-        metric("Метод", r.method === "leq" ? "Leq" : "ζ", "small"),
-        metric("Брой колена 90°", r.elbows90.toString(), "small"),
-        metric("Общо съпротивление ΣK [-]", fmt(r.kTotal, 2), "small", r.kTone),
-        metric("Скорост v [m/s]", fmt(r.velocity, 3), "small"),
-        metric("Re [-]", fmt(r.re, 0), "small"),
-        metric("f [-]", fmt(r.f, 4), "small"),
-        metric("Δp линейни [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
-        metric("Δp колена [kPa]", fmt(r.dpElbows / 1000, 2), "small"),
-        metric("Δp вход/изход [kPa]", fmt(r.dpIO / 1000, 2), "small"),
-        metric("Δp доп. фитинги [kPa]", fmt(r.dpExtras / 1000, 2), "small"),
-        metric("Δp локални [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
-        metric("Δp общ [kPa]", fmt(r.dpTotal / 1000, 2), "small"),
-        metric("Δp общ [bar]", fmt(r.dpTotalBar, 4), "small"),
-        metric("CIP проверка", r.cipStatus, "small", r.cipTone),
-        metric("ε диапазон", r.epsTone === "ok" ? "В диапазон" : r.epsTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.epsTone),
-        metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone),
-        metric("ΣK доп. фитинги", fmt(r.kExtras, 2), "small", r.extrasTone)
-      ].join("");
-    }
-
-    function formulaLine(text) {
-      return `<div class="formula">${text}</div>`;
-    }
-
-    function renderFormulas(x) {
-      const f = document.getElementById("formulas");
-      const ioPart = x.includeIO ? " + 1.5" : "";
-      const extrasText = `Kдоп = K11852 + K11851 + K32676 = ${fmt(x.k11852Total, 3)} + ${fmt(x.k11851Total, 3)} + ${fmt(x.k32676Total, 3)} = ${fmt(x.kExtras, 3)}`;
-      const lossBlock = x.lossMethod === "leq"
-        ? `11) Метод Leq (еквивалентна дължина):\nLeq(колена) = nколена·(L/D)коляно·D = ${x.elbows90}·${fmt(x.leqElbowLD, 1)}·${fmt(x.d, 4)} = ${fmt(x.leqElbows, 3)} m\nLeq(вход/изход) = (Kвх/изх / f)·D = (${fmt(x.kIO, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqIO, 3)} m\nLeq(доп) = (Kдоп / f)·D = (${fmt(x.kExtras, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqExtras, 3)} m\nLхидр = L + Leq(колена) + Leq(вх/изх) + Leq(доп) = ${fmt(x.length, 3)} + ${fmt(x.leqElbows, 3)} + ${fmt(x.leqIO, 3)} + ${fmt(x.leqExtras, 3)} = ${fmt(x.lHydraulicTotal, 3)} m\n${extrasText}\nΔp = f·(Lхидр/D)·ρv²/2 = ${fmt(x.dpTotal, 2)} Pa`
-        : `11) Метод ζ (локални коефициенти):\nΣK = nколена·Kколяно${x.includeIO ? " + Kвх/изх" : ""} + Kдоп\n${extrasText}\nΣK = ${x.elbows90}·${fmt(x.kElbow, 2)}${ioPart} + ${fmt(x.kExtras, 3)} = ${fmt(x.kTotal, 3)}\nΔpлок = ΣK·ρv²/2 = ${fmt(x.kTotal, 3)}·${fmt(x.dyn, 3)} = ${fmt(x.dpLocal, 2)} Pa`;
-
-      const lines = [
-        formulaLine(`1) Преобразуване на дебит:\nQ = ${fmt(x.q_l_h, 1)} L/h = ${fmt(x.q_l_s, 4)} L/s = ${fmt(x.q_l_h / 1000, 4)} m³/h = ${fmt(x.q, 6)} m³/s`),
-        formulaLine(`2) Вътрешен диаметър (от избраната тръба):\nDᵢ = OD - 2·s = ${fmt(x.od, 1)} - 2·${fmt(x.wall, 1)} = ${fmt(x.d_mm, 1)} mm = ${fmt(x.d, 4)} m`),
-        formulaLine(`3) Площ на сечение:\nA = π·D²/4 = π·(${fmt(x.d, 4)})²/4 = ${fmt(x.area, 6)} m²`),
-        formulaLine(`4) Необходим обем за задръжка:\nV = Q·t = ${fmt(x.q, 6)}·${fmt(x.t, 1)} = ${fmt(x.volume, 6)} m³`),
-        formulaLine(`5) Обем на тръбата за 1 метър:\nV₁m = A·1m = ${fmt(x.area, 6)} m³/m = ${fmt(x.volumePerMeter_l_m, 3)} L/m`),
-        formulaLine(`6) Обща дължина на тръбната задръжка:\nL = V/A = ${fmt(x.volume, 6)} / ${fmt(x.area, 6)} = ${fmt(x.length, 3)} m`),
-        formulaLine(`7) Уделна задръжка:\nt/V = ${fmt(x.t, 2)} / ${fmt(x.volume_l, 3)} = ${fmt(x.retention_s_l, 3)} s/L`),
-        formulaLine(`8) Скорост:\nv = Q/A = ${fmt(x.q, 6)} / ${fmt(x.area, 6)} = ${fmt(x.velocity, 4)} m/s`),
-        formulaLine(`9) Reynolds:\nRe = ρ·v·D/μ = ${fmt(x.rho, 1)}·${fmt(x.velocity, 4)}·${fmt(x.d, 4)} / ${fmt(x.mu, 6)} = ${fmt(x.re, 0)}`),
-        formulaLine(`10) Коефициент на триене f:\nRe < 2300: f = 64/Re; Re > 4000: Swamee-Jain; 2300–4000: линейна интерполация\nε = ${fmt(x.roughness_mm, 4)} mm = ${fmt(x.eps, 6)} m; f = ${fmt(x.f, 5)}\nВъведен диапазон за ε: min 0.0005 mm / max 0.1000 mm`),
-        formulaLine(`${lossBlock}\nВъведен диапазон за K(90°): min 0.10 / max 2.00; (L/D)коляно: min 5 / max 120`),
-        formulaLine(`12) Динамично налягане:\nρv²/2 = ${fmt(x.rho, 1)}·(${fmt(x.velocity, 4)})²/2 = ${fmt(x.dyn, 3)} Pa`),
-        formulaLine(`13) Пад по дължина:\nΔpₗ = f·(L/D)·ρv²/2 = ${fmt(x.f, 5)}·(${fmt(x.length, 3)}/${fmt(x.d, 4)})·${fmt(x.dyn, 3)} = ${fmt(x.dpLinear, 2)} Pa`),
-        formulaLine(`14) Локален пад (детайл):\nΔpколена = ${fmt(x.dpElbows, 2)} Pa; Δpвх/изх = ${fmt(x.dpIO, 2)} Pa; Δpдоп = ${fmt(x.dpExtras, 2)} Pa; Δpлок = ${fmt(x.dpLocal, 2)} Pa`),
-        formulaLine(`15) Общ пад на налягане:\nΔp = Δpₗ + Δpₗₒc = ${fmt(x.dpLinear, 2)} + ${fmt(x.dpLocal, 2)} = ${fmt(x.dpTotal, 2)} Pa (${fmt(x.dpTotal / 1000, 2)} kPa)`),
-        formulaLine(`16) Преобразуване за избор на помпа:\nΔp [bar] = Δp [Pa] / 100000 = ${fmt(x.dpTotal, 2)} / 100000 = ${fmt(x.dpTotalBar, 4)} bar`),
-        formulaLine(`17) CIP критерий за измиване:\nцелеви диапазон v = ${fmt(x.cipMin, 2)} до ${fmt(x.cipMax, 2)} m/s; текущо v = ${fmt(x.velocity, 3)} m/s → ${x.cipStatus}`)
-      ];
-      lastFormulaLines = lines.map(item => item.replace(/<div class="formula">|<\/div>/g, ""));
-      f.innerHTML = lines.join("");
-    }
-
-    function bindAutoRecalculation() {
-      const recalcControls = document.querySelectorAll("input, select");
-      let timer = null;
-      const scheduleCalc = () => {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(() => {
-          saveFormState();
-          calc();
-        }, 120);
-      };
-      recalcControls.forEach(control => {
-        control.addEventListener("input", scheduleCalc);
-        control.addEventListener("change", scheduleCalc);
-      });
-
-      let resizeTimer = null;
-      window.addEventListener("resize", () => {
-        if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => calc(), 150);
-      });
-    }
-
-    fillFluids();
-    fillStandards();
-    fillElbowLibrary();
-    fillFittingLibraries();
-    bindAutoRecalculation();
-    restoreInputsFromSession();
-    pipeSizeSelect.addEventListener("change", updatePipeIdInfo);
-    calcBtn.addEventListener("click", calc);
-    exportWordBtn.addEventListener("click", () => exportProtocol("word"));
-    exportPdfBtn.addEventListener("click", () => exportProtocol("pdf"));
-    resetAllBtn.addEventListener("click", resetAllFields);
-    calc();
-  </script>
+  <div id="globalTooltip" class="global-tooltip" role="tooltip"></div>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
