@@ -180,7 +180,17 @@
     let currentRouteMode = "process";
 
     function fmt(value, digits = 3) {
-      return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: digits, minimumFractionDigits: digits }) : "—";
+      const shownDigits = Math.max(0, Math.min(3, digits));
+      return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: shownDigits }) : "—";
+    }
+
+    function formatInputValue(id, value) {
+      const numeric = typeof value === "number" ? value : parseFloat(value);
+      if (!Number.isFinite(numeric)) return value;
+      const smallValueIds = new Set(["pumpMu"]);
+      const digits = smallValueIds.has(id) ? 6 : 3;
+      const rounded = Number(numeric.toFixed(digits));
+      return String(rounded);
     }
 
     function escapeAttr(value) {
@@ -664,8 +674,8 @@
         const data = segment.components?.[component.key] || { count: 0, zeta: component.zeta };
         return `
           <div class="component-label">${component.label}<br>ζ=${fmt(component.zeta, 2)}</div>
-          <input class="route-component-count" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="1" value="${escapeAttr(data.count ?? 0)}" aria-label="${escapeAttr(component.label)} брой" />
-          <input class="route-component-zeta" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="0.01" value="${escapeAttr(data.zeta ?? component.zeta)}" aria-label="${escapeAttr(component.label)} ζ" />
+          <input class="route-component-count" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", data.count ?? 0))}" aria-label="${escapeAttr(component.label)} брой" />
+          <input class="route-component-zeta" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", data.zeta ?? component.zeta))}" aria-label="${escapeAttr(component.label)} ζ" />
         `;
       }).join("");
     }
@@ -684,27 +694,27 @@
             </div>
             <div class="field">
               <label>Length [m]</label>
-              <input class="route-length" type="number" min="0" step="0.1" value="${escapeAttr(segment.length)}" />
+              <input class="route-length" type="number" min="0" step="0.1" value="${escapeAttr(formatInputValue("", segment.length))}" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
               <label>90° elbows DIN 11852 (ζ=0.60)</label>
-              <input class="route-elbows90" type="number" min="0" step="1" value="${escapeAttr(segment.elbows90)}" />
+              <input class="route-elbows90" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.elbows90))}" />
             </div>
             <div class="field">
               <label>45° elbows DIN 11852 (ζ=0.35)</label>
-              <input class="route-elbows45" type="number" min="0" step="1" value="${escapeAttr(segment.elbows45)}" />
+              <input class="route-elbows45" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.elbows45))}" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
               <label>T-pieces flow-through (ζ=0.30)</label>
-              <input class="route-tee-through" type="number" min="0" step="1" value="${escapeAttr(segment.teeThrough)}" />
+              <input class="route-tee-through" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.teeThrough))}" />
             </div>
             <div class="field">
               <label>T-pieces flow-branch (ζ=0.70)</label>
-              <input class="route-tee-branch" type="number" min="0" step="1" value="${escapeAttr(segment.teeBranch)}" />
+              <input class="route-tee-branch" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.teeBranch))}" />
             </div>
           </div>
           <details>
@@ -716,10 +726,10 @@
               ${routeComponentRows(segment, index)}
               <div class="component-label">Sudden expansion (A1->A2)<br>ζ=(1-A1/A2)²; празно = auto</div>
               <input type="number" min="0" step="1" value="1" readonly />
-              <input class="route-expansion-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.expansionZeta ?? "")}" aria-label="Sudden expansion ζ override" />
+              <input class="route-expansion-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.expansionZeta === undefined || segment.expansionZeta === "" ? "" : formatInputValue("", segment.expansionZeta))}" aria-label="Sudden expansion ζ override" />
               <div class="component-label">Sudden contraction (A1->A2)<br>ζ=0.5×(1-A2/A1); празно = auto</div>
               <input type="number" min="0" step="1" value="1" readonly />
-              <input class="route-contraction-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.contractionZeta ?? "")}" aria-label="Sudden contraction ζ override" />
+              <input class="route-contraction-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.contractionZeta === undefined || segment.contractionZeta === "" ? "" : formatInputValue("", segment.contractionZeta))}" aria-label="Sudden contraction ζ override" />
             </div>
           </details>
         </div>
@@ -1176,9 +1186,25 @@
       if (!el || value === undefined || value === null) return;
       if (el.type === "checkbox") {
         el.checked = Boolean(value);
+      } else if (el.type === "number") {
+        el.value = formatInputValue(id, value);
       } else {
         el.value = value;
       }
+    }
+
+    function normalizeNumberControl(el) {
+      if (!el || el.type !== "number" || el.value === "") return;
+      el.value = formatInputValue(el.id || "", el.value);
+    }
+
+    function bindNumberFormatting() {
+      document.addEventListener("change", event => {
+        if (event.target?.matches?.("input[type='number']")) normalizeNumberControl(event.target);
+      });
+      document.addEventListener("focusout", event => {
+        if (event.target?.matches?.("input[type='number']")) normalizeNumberControl(event.target);
+      });
     }
 
     function normalizeInletOutletExtensionControl() {
@@ -1186,7 +1212,7 @@
       if (!el) return;
       const value = parseFloat(el.value);
       if (Number.isFinite(value) && value > 20) {
-        el.value = value / 1000;
+        el.value = formatInputValue("inletOutletExtension", value / 1000);
       }
     }
 
@@ -3175,6 +3201,7 @@
     fillElbowLibrary();
     fillFittingLibraries();
     bindGlobalTooltips();
+    bindNumberFormatting();
     setupPages();
     bindAutoRecalculation();
     restoreInputsFromSession();
