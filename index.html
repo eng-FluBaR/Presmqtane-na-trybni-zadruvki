@@ -56,7 +56,14 @@
           <div class="field">
             <label for="pipeStandard" class="label-with-help">
               <span>Серия тръби (DIN EN 10357)</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира серията от каталога. Тя определя наличните OD и дебелини на стената.">i</span>
+              <button
+                id="pipeStandardHelp"
+                class="info-tip"
+                type="button"
+                aria-label="Пояснение за каталожните данни"
+                aria-expanded="false"
+                data-tip="Размерите в каталога са типични за тръби за хранително-вкусова промишленост по DIN EN 10357 (серии A и D). Преди реализация потвърди актуалната серия, клас стомана и допустими дебелини по твоята спецификация и каталога на доставчика. Локалните съпротивления за фитинги се сверяват по проектни таблици и каталожни данни на производителя."
+              >ℹ</button>
             </label>
             <select id="pipeStandard"></select>
           </div>
@@ -67,6 +74,34 @@
             </label>
             <select id="pipeSize"></select>
             <div id="pipeIdInfo" class="note compact-output"></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field full-width">
+            <label for="elbowType" class="label-with-help">
+              <span>Стандарт за коляно 90° (DIN 11852)</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира каталожни или справочни стойности за K, L/D и радиус на коляното. При ръчен режим се ползват въведените стойности.">i</span>
+            </label>
+            <select id="elbowType"></select>
+            <div id="elbowSourceInfo" class="note compact-output"></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="straightSeg" class="label-with-help">
+              <span>Дължина на прав участък [м]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина на един прав участък в серпентината. Използва се за определяне на броя прави секции, колена и габаритната визуализация.">i</span>
+            </label>
+            <input id="straightSeg" type="number" min="0.2" max="20" step="0.1" value="2" />
+          </div>
+          <div class="field">
+            <label for="inletOutletExtension" class="label-with-help">
+              <span>Удължение вход/изход [м]</span>
+              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина вход/изход = права секция + 1 коляно + това удължение. Стойността може да се коригира според реалния монтаж.">i</span>
+            </label>
+            <input id="inletOutletExtension" type="number" min="0" max="2" step="0.01" value="0.15" />
           </div>
         </div>
 
@@ -84,23 +119,6 @@
               <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Плътност на продукта. Участва в Reynolds, динамичното налягане и избора на помпа.">i</span>
             </label>
             <input id="rho" type="number" min="800" max="1300" step="1" value="998" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label for="straightSeg" class="label-with-help">
-              <span>Права секция между U-обръщания [m]</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина на един прав участък в серпентината. Използва се за определяне на броя прави секции, колена и габаритната визуализация.">i</span>
-            </label>
-            <input id="straightSeg" type="number" min="0.2" max="20" step="0.1" value="2" />
-          </div>
-          <div class="field">
-            <label for="inletOutletExtension" class="label-with-help">
-              <span>Удължение вход/изход след коляно [mm]</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Дължина вход/изход = права секция + 1 коляно + това удължение. Стойността може да се коригира според реалния монтаж.">i</span>
-            </label>
-            <input id="inletOutletExtension" type="number" min="0" max="2000" step="10" value="150" />
           </div>
         </div>
           </div>
@@ -143,14 +161,6 @@
 
         <div class="form-row">
           <div class="field">
-            <label for="elbowType" class="label-with-help">
-              <span>Библиотека за коляно 90°</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избира каталожни или справочни стойности за K, L/D и радиус на коляното. При ръчен режим се ползват въведените стойности.">i</span>
-            </label>
-            <select id="elbowType"></select>
-            <div id="elbowSourceInfo" class="note compact-output"></div>
-          </div>
-          <div class="field">
             <label for="kElbow" class="label-with-help">
               <span>Коефициент K за едно коляно 90°</span>
               <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Диапазон за K(90°) в калкулатора: min 0.10 / max 2.00. Използва се при метод ζ.">i</span>
@@ -161,9 +171,6 @@
               <span>Използвай ръчно въведените K, L/D и R/D</span>
             </label>
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="field">
             <label for="leqElbowLD" class="label-with-help">
               <span>Еквивалентна дължина за 1 коляно (L/D)</span>
@@ -171,6 +178,9 @@
             </label>
             <input id="leqElbowLD" type="number" min="5" max="120" step="1" value="30" />
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="field">
             <label for="elbowRadiusD" class="label-with-help">
               <span>Радиус на коляно R/D [-]</span>
@@ -178,127 +188,8 @@
             </label>
             <input id="elbowRadiusD" type="number" min="0.5" max="5" step="0.1" value="1.5" />
           </div>
-        </div>
-          </div>
-        </details>
-
-        <details class="form-section">
-          <summary>Допълнителни фитинги и локални загуби</summary>
-          <div class="form-section-body">
-        <div class="form-row">
           <div class="field">
-            <label class="inline" style="margin-top:0;">
-              <input id="use11852" type="checkbox" />
-              <span>Добави тройници/колена DIN 11852</span>
-            </label>
-            <label class="inline">
-              <input id="manual11852" type="checkbox" />
-              <span>Ръчно K за DIN 11852</span>
-            </label>
-            <label for="lib11852" class="label-with-help">
-              <span>Библиотека DIN 11852</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за санитарни фитинги DIN 11852. При отметка за ръчно K се взима стойността от полето K за 1 бр.">i</span>
-            </label>
-            <select id="lib11852"></select>
-            <div id="lib11852Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
-            <div class="form-row" style="margin-bottom:0;">
-              <div class="field">
-                <label for="count11852" class="label-with-help">
-                  <span>Брой</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени допълнителни елементи DIN 11852. Участват само ако отметката за добавяне е включена.">i</span>
-                </label>
-                <input id="count11852" type="number" min="0" max="200" step="1" value="0" />
-              </div>
-              <div class="field">
-                <label for="k11852" class="label-with-help">
-                  <span>K за 1 бр.</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за един елемент. Ползва се при включен ръчен режим за DIN 11852.">i</span>
-                </label>
-                <input id="k11852" type="number" min="0.05" max="8" step="0.05" value="1.50" />
-              </div>
-            </div>
           </div>
-          <div class="field">
-            <label class="inline" style="margin-top:0;">
-              <input id="use11851" type="checkbox" />
-              <span>Добави резбови съединения DIN 11851</span>
-            </label>
-            <label class="inline">
-              <input id="manual11851" type="checkbox" />
-              <span>Ръчно K за DIN 11851</span>
-            </label>
-            <label for="lib11851" class="label-with-help">
-              <span>Библиотека DIN 11851</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за резбови съединения DIN 11851. При ръчно K се взима стойността от полето K за 1 бр.">i</span>
-            </label>
-            <select id="lib11851"></select>
-            <div id="lib11851Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
-            <div class="form-row" style="margin-bottom:0;">
-              <div class="field">
-                <label for="count11851" class="label-with-help">
-                  <span>Брой</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени резбови съединения DIN 11851. Участват само ако отметката за добавяне е включена.">i</span>
-                </label>
-                <input id="count11851" type="number" min="0" max="200" step="1" value="0" />
-              </div>
-              <div class="field">
-                <label for="k11851" class="label-with-help">
-                  <span>K за 1 бр.</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за едно резбово съединение. Ползва се при включен ръчен режим за DIN 11851.">i</span>
-                </label>
-                <input id="k11851" type="number" min="0.05" max="8" step="0.05" value="0.80" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label class="inline" style="margin-top:0;">
-              <input id="use32676" type="checkbox" />
-              <span>Добави клампови съединения DIN 32676</span>
-            </label>
-            <label class="inline">
-              <input id="manual32676" type="checkbox" />
-              <span>Ръчно K за DIN 32676</span>
-            </label>
-            <label for="lib32676" class="label-with-help">
-              <span>Библиотека DIN 32676</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Избор на ориентировъчен K за клампови съединения DIN 32676. При ръчно K се взима стойността от полето K за 1 бр.">i</span>
-            </label>
-            <select id="lib32676"></select>
-            <div id="lib32676Info" class="note" style="margin-top:8px; padding:8px; font-size:12px;"></div>
-            <div class="form-row" style="margin-bottom:0;">
-              <div class="field">
-                <label for="count32676" class="label-with-help">
-                  <span>Брой</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Брой включени клампови съединения DIN 32676. Участват само ако отметката за добавяне е включена.">i</span>
-                </label>
-                <input id="count32676" type="number" min="0" max="200" step="1" value="0" />
-              </div>
-              <div class="field">
-                <label for="k32676" class="label-with-help">
-                  <span>K за 1 бр.</span>
-                  <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Локален коефициент за едно клампово съединение. Ползва се при включен ръчен режим за DIN 32676.">i</span>
-                </label>
-                <input id="k32676" type="number" min="0.05" max="8" step="0.05" value="0.20" />
-              </div>
-            </div>
-          </div>
-          <div class="field">
-            <div class="compact-help">
-              <span>Допълнителни елементи</span>
-              <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Тези елементи са опционални. По подразбиране не участват в сметката. При включване се добавят към локалните съпротивления и формулите.">i</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="inline">
-          <input id="includeIO" type="checkbox" checked />
-          <label for="includeIO" style="margin:0;" class="label-with-help">
-            <span>Добави локални загуби вход/изход (общо K ≈ 1.5)</span>
-            <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Включва ориентировъчни локални загуби за вход и изход на системата. Геометричната дължина вход/изход се смята отделно.">i</span>
-          </label>
         </div>
           </div>
         </details>
@@ -310,24 +201,26 @@
         <div class="button-row secondary">
           <button id="resetAllBtn" class="ghost">Рестарт на полетата</button>
         </div>
+        <input id="targetSpeed" type="hidden" value="2.0" />
 
-        <div class="catalog-help">
-          <span>Каталожни данни</span>
-          <span class="info-tip" tabindex="0" aria-label="Пояснение" data-tip="Размерите в каталога са типични за тръби за хранително-вкусова промишленост по DIN EN 10357 (серии A и D). Преди реализация потвърди актуалната серия, клас стомана и допустими дебелини по твоята спецификация и каталога на доставчика. Локалните съпротивления за фитинги се сверяват по проектни таблици и каталожни данни на производителя.">i</span>
-        </div>
       </div>
 
       <div class="card">
         <h2>Резултати</h2>
 
         <div class="result-group">
-          <div class="section-title">Процесни стойности</div>
+          <div class="section-title">Основни резултати</div>
           <div class="metrics" id="primaryMetrics"></div>
         </div>
 
         <div class="result-group">
-          <div class="section-title">Хидравлика и съпротивления</div>
+          <div class="section-title">Работни параметри</div>
           <div class="metrics" id="secondaryMetrics"></div>
+        </div>
+
+        <div class="result-group">
+          <div class="section-title">CIP проверка</div>
+          <div id="cipCheckPanel" class="cip-check-panel"></div>
         </div>
 
         <div class="result-group">
@@ -337,7 +230,8 @@
         </div>
 
         <details class="formula-box">
-          <summary>Формули и стойности от изчислението</summary>
+          <summary>Детайли от изчислението</summary>
+          <div class="metrics detail-metrics" id="detailMetrics"></div>
           <div id="formulas"></div>
         </details>
       </div>
@@ -348,55 +242,46 @@
       <div class="grid">
         <div class="card">
           <h2>CIP режим</h2>
+          <div class="mode-toggle" aria-label="CIP режим на свързване">
+            <button id="cipLinkedBtn" class="mode-option active" type="button">🔗 Свързан със задръжката</button>
+            <button id="cipStandaloneBtn" class="mode-option" type="button">✂️ Самостоятелен режим</button>
+          </div>
           <div class="form-row">
             <div class="field">
-              <label for="cipFlow">CIP дебит Q [L/h]</label>
-              <input id="cipFlow" type="number" min="1" step="100" value="5000" />
-            </div>
-            <div class="field">
-              <label for="cipDiameter">Вътрешен диаметър ID [mm]</label>
+              <label for="cipDiameter">Вътрешен диаметър D [mm]</label>
               <input id="cipDiameter" type="number" min="5" step="0.1" value="22" />
             </div>
-          </div>
-          <div class="form-row">
             <div class="field">
-              <label for="cipRouteLength">Дължина на миещия кръг [m]</label>
-              <input id="cipRouteLength" type="number" min="0.1" step="0.5" value="35" />
-            </div>
-            <div class="field">
-              <label for="cipTotalK">Общо локални съпротивления ΣK [-]</label>
-              <input id="cipTotalK" type="number" min="0" step="0.1" value="12" />
+              <label for="cipRouteLength">Обща дължина на трасето [м]</label>
+              <input id="cipRouteLength" type="number" min="0.1" step="0.1" value="35" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label for="cipRho">Плътност ρ [kg/m³]</label>
-              <input id="cipRho" type="number" min="800" max="1300" step="1" value="998" />
+              <label for="cipVolume">Общ обем [л]</label>
+              <input id="cipVolume" type="number" min="0.1" step="0.1" value="10" />
             </div>
             <div class="field">
-              <label for="cipMu">Вискозитет μ [mPa·s]</label>
-              <input id="cipMu" type="number" min="0.2" max="500" step="0.1" value="1" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label for="cipRoughness">Грапавост ε [mm]</label>
-              <input id="cipRoughness" type="number" min="0.0005" max="0.1" step="0.0005" value="0.0015" />
-            </div>
-            <div class="field">
-              <label for="targetSpeed">Търсена CIP скорост vₜ [m/s]</label>
-              <input id="targetSpeed" type="number" min="0.3" max="4.0" step="0.1" value="2.0" />
+              <label for="cipMin">CIP минимална скорост [м/с]</label>
+              <input id="cipMin" type="number" min="0.5" max="4.0" step="0.1" value="1.5" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label for="cipMin">CIP минимална скорост [m/s]</label>
-              <input id="cipMin" type="number" min="0.5" max="3.0" step="0.1" value="1.5" />
-            </div>
-            <div class="field">
-              <label for="cipMax">CIP максимална скорост [m/s]</label>
+              <label for="cipMax">CIP максимална скорост [м/с]</label>
               <input id="cipMax" type="number" min="0.8" max="4.0" step="0.1" value="2.5" />
             </div>
+            <div class="field">
+              <label for="cipTemp">CIP температура [°C]</label>
+              <input id="cipTemp" type="number" min="65" max="80" step="1" value="65" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="cipCycles">Брой цикъла на миене</label>
+              <input id="cipCycles" type="number" min="1" step="1" value="1" />
+            </div>
+            <div class="field"></div>
           </div>
           <div class="button-row">
             <button id="cipCalcBtn" type="button">Изчисли CIP</button>
@@ -406,31 +291,6 @@
           <h2>Резултати за CIP</h2>
           <div class="metrics" id="cipMetrics"></div>
           <div class="note" id="cipNote"></div>
-          <details class="result-group" open>
-            <summary><div class="section-title">Профили DN-2 / DN-1 / DN / DN+1 / DN+2</div></summary>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>DN</th>
-                    <th>ID [mm]</th>
-                    <th>v [m/s]</th>
-                    <th>Δp [bar]</th>
-                    <th>L [m]</th>
-                    <th>CIP статус</th>
-                  </tr>
-                </thead>
-                <tbody id="profileTable"></tbody>
-              </table>
-            </div>
-            <div class="chart-box">
-              <canvas id="speedChart" width="520" height="250"></canvas>
-            </div>
-          </details>
-          <div class="result-group">
-            <div class="section-title">Препоръка за търсена CIP скорост</div>
-            <div id="recommendationBox" class="note"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -439,34 +299,76 @@
       <div class="grid">
         <div class="card">
           <h2>Избор на помпа</h2>
+          <div class="mode-toggle five-way" aria-label="Режим за избор на помпа">
+            <button id="pumpModeProcess" class="mode-option active" type="button" data-pump-mode="process">Задръжка - работа</button>
+            <button id="pumpModeCip" class="mode-option" type="button" data-pump-mode="cip">Задръжка - CIP</button>
+            <button id="pumpModeRouteProcess" class="mode-option" type="button" data-pump-mode="routeProcess">Трасе - работа</button>
+            <button id="pumpModeRouteCip" class="mode-option" type="button" data-pump-mode="routeCip">Трасе - CIP</button>
+            <button id="pumpModeTest" class="mode-option" type="button" data-pump-mode="test">Тестов режим</button>
+          </div>
+          <div id="pumpLinkToggle" class="mode-toggle" aria-label="Свързване на помпения режим">
+            <button id="pumpLinkedBtn" class="mode-option active" type="button">🔗 Свързан режим</button>
+            <button id="pumpStandaloneBtn" class="mode-option" type="button">✂️ Ръчно въвеждане</button>
+          </div>
+          <div id="pumpModeNotice" class="note compact-note"></div>
           <div class="form-row">
             <div class="field">
-              <label for="pumpFlow">Работен дебит [L/h]</label>
+              <label for="pumpFlow">Q [L/h]</label>
               <input id="pumpFlow" type="number" min="1" step="100" value="5000" />
             </div>
             <div class="field">
-              <label for="pumpDp">Необходим пад на налягане [bar]</label>
-              <input id="pumpDp" type="number" min="0" step="0.01" value="0.35" />
+              <label for="pumpDiameter">D_inner [mm]</label>
+              <input id="pumpDiameter" type="number" min="1" step="0.1" value="22" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label for="pumpStaticHead">Статичен напор [m]</label>
+              <label for="pumpLength">L_total [m]</label>
+              <input id="pumpLength" type="number" min="0.1" step="0.1" value="35" />
+            </div>
+            <div class="field">
+              <label for="pumpSourceDp">Δp от свързания модул [bar]</label>
+              <input id="pumpSourceDp" type="number" min="0" step="0.0001" value="0" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpRho">ρ [kg/m³]</label>
+              <input id="pumpRho" type="number" min="700" max="1300" step="1" value="1000" />
+            </div>
+            <div class="field">
+              <label for="pumpMu">μ [Pa·s]</label>
+              <input id="pumpMu" type="number" min="0.0001" max="1" step="0.00001" value="0.001" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpRoughness">Грапавост ε [mm]</label>
+              <input id="pumpRoughness" type="number" min="0.0005" max="0.1" step="0.0005" value="0.0015" />
+            </div>
+            <div class="field">
+              <label for="pumpTotalK">Σζ локални съпротивления [-]</label>
+              <input id="pumpTotalK" type="number" min="0" step="0.1" value="0" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="pumpStaticHead">Геодезична разлика Δz [m]</label>
               <input id="pumpStaticHead" type="number" step="0.1" value="2" />
             </div>
             <div class="field">
-              <label for="pumpReserve">Резерв [%]</label>
-              <input id="pumpReserve" type="number" min="0" max="100" step="1" value="15" />
+              <label for="pumpExtraHead">Допълнителни загуби — арматури [m]</label>
+              <input id="pumpExtraHead" type="number" min="0" step="0.1" value="0" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label for="pumpEfficiency">Ориентировъчен КПД [%]</label>
-              <input id="pumpEfficiency" type="number" min="10" max="90" step="1" value="55" />
+              <label for="pumpBackPressure">Противоналягане [bar]</label>
+              <input id="pumpBackPressure" type="number" min="0" step="0.01" value="0" />
             </div>
             <div class="field">
-              <label for="pumpRho">Плътност ρ [kg/m³]</label>
-              <input id="pumpRho" type="number" min="800" max="1300" step="1" value="1000" />
+              <label for="pumpEfficiency">η на помпата [-]</label>
+              <input id="pumpEfficiency" type="number" min="0.40" max="0.80" step="0.01" value="0.65" />
             </div>
           </div>
           <div class="button-row">
@@ -476,6 +378,7 @@
         <div class="card">
           <h2>Препоръка</h2>
           <div class="metrics" id="pumpMetrics"></div>
+          <div id="pumpBreakdown" class="head-breakdown"></div>
           <div class="note" id="pumpNote"></div>
         </div>
       </div>
@@ -485,40 +388,14 @@
       <div class="grid">
         <div class="card">
           <h2>Тръбно трасе</h2>
+          <div class="mode-toggle" aria-label="Режим на тръбното трасе">
+            <button id="routeModeProcess" class="mode-option active" type="button" data-route-mode="process">Работен режим</button>
+            <button id="routeModeCip" class="mode-option" type="button" data-route-mode="cip">CIP режим</button>
+          </div>
           <div class="form-row">
             <div class="field">
               <label for="routeFlow">Дебит Q [L/h]</label>
               <input id="routeFlow" type="number" min="1" step="100" value="5000" />
-            </div>
-            <div class="field">
-              <label for="routeDiameter">Вътрешен диаметър ID [mm]</label>
-              <input id="routeDiameter" type="number" min="5" step="0.1" value="22" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label for="routeLength">Права дължина [m]</label>
-              <input id="routeLength" type="number" min="0.1" step="0.5" value="20" />
-            </div>
-            <div class="field">
-              <label for="routeElbows">Колена 90° [бр.]</label>
-              <input id="routeElbows" type="number" min="0" step="1" value="6" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label for="routeValves">Вентили [бр.]</label>
-              <input id="routeValves" type="number" min="0" step="1" value="2" />
-            </div>
-            <div class="field">
-              <label for="routeTees">Тройници [бр.]</label>
-              <input id="routeTees" type="number" min="0" step="1" value="1" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label for="routeOtherK">Други локални ΣK [-]</label>
-              <input id="routeOtherK" type="number" min="0" step="0.1" value="0" />
             </div>
             <div class="field">
               <label for="routeRoughness">Грапавост ε [mm]</label>
@@ -535,6 +412,11 @@
               <input id="routeMu" type="number" min="0.2" max="500" step="0.1" value="1" />
             </div>
           </div>
+          <div id="routeSegments"></div>
+          <div class="button-row secondary">
+            <button id="addRouteSegmentBtn" class="ghost" type="button">Добави сегмент</button>
+            <button id="removeRouteSegmentBtn" class="ghost" type="button">Премахни последния</button>
+          </div>
           <div class="button-row">
             <button id="routeCalcBtn" type="button">Изчисли трасе</button>
           </div>
@@ -542,6 +424,22 @@
         <div class="card">
           <h2>Резултати за трасе</h2>
           <div class="metrics" id="routeMetrics"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Сегмент</th>
+                  <th>DN</th>
+                  <th>L [m]</th>
+                  <th>v [m/s]</th>
+                  <th>Re [-]</th>
+                  <th>Σζ [-]</th>
+                  <th>Δp [bar]</th>
+                </tr>
+              </thead>
+              <tbody id="routeResultsTable"></tbody>
+            </table>
+          </div>
           <div class="note" id="routeNote"></div>
         </div>
       </div>
@@ -551,21 +449,21 @@
       <div class="grid">
         <div class="card">
           <h2>Протоколи</h2>
-          <div class="result-group">
+          <div class="result-group protocol-options">
             <div class="section-title">Включи в протокола</div>
-            <label class="inline">
+            <label class="protocol-option">
               <input id="protocolRetention" type="checkbox" checked />
               <span>Тръбна задръжка със серпентина</span>
             </label>
-            <label class="inline">
+            <label class="protocol-option">
               <input id="protocolCip" type="checkbox" />
               <span>CIP миене</span>
             </label>
-            <label class="inline">
+            <label class="protocol-option">
               <input id="protocolPumps" type="checkbox" />
               <span>Избор на помпа</span>
             </label>
-            <label class="inline">
+            <label class="protocol-option">
               <input id="protocolRoutes" type="checkbox" />
               <span>Тръбно трасе</span>
             </label>

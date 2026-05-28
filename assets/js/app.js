@@ -121,6 +121,22 @@
       }
     };
 
+    const routeComponentLibrary = [
+      { key: "butterflySmall", label: "Butterfly valve fully open (DN25-DN50)", zeta: 0.50 },
+      { key: "butterflyLarge", label: "Butterfly valve fully open (DN65-DN100)", zeta: 0.35 },
+      { key: "ballValve", label: "Ball valve fully open", zeta: 0.10 },
+      { key: "gateValve", label: "Gate valve fully open", zeta: 0.20 },
+      { key: "checkSwing", label: "Check valve (swing type)", zeta: 2.50 },
+      { key: "checkLift", label: "Check valve (lift type)", zeta: 8.00 },
+      { key: "diaphragm", label: "Diaphragm valve fully open", zeta: 2.30 },
+      { key: "din11852Fitting", label: "DIN 11852 санитарен фитинг/тройник (типично)", zeta: 1.20 },
+      { key: "din11851Thread", label: "DIN 11851 резбово съединение (типично)", zeta: 0.80 },
+      { key: "din32676Clamp", label: "DIN 32676 клампово съединение (типично)", zeta: 0.20 },
+      { key: "sharpEntry", label: "Sharp entry (tank->pipe)", zeta: 0.50 },
+      { key: "sharpExit", label: "Sharp exit (pipe->tank)", zeta: 1.00 },
+      { key: "roundedEntry", label: "Rounded entry", zeta: 0.05 }
+    ];
+
     const fluidSelect = document.getElementById("fluid");
     const rhoInput = document.getElementById("rho");
     const muInput = document.getElementById("mu");
@@ -142,8 +158,26 @@
     const profileTable = document.getElementById("profileTable");
     const recommendationBox = document.getElementById("recommendationBox");
     const FORM_STATE_KEY = "coilCalcFormState";
+    const CIP_LINKED_KEY = "coilCalcCipLinked";
+    const PUMP_MODE_KEY = "coilCalcPumpMode";
+    const PUMP_LINK_KEY_PREFIX = "coilCalcPumpLinked";
+    const PUMP_STATE_KEY_PREFIX = "coilCalcPumpState";
+    const ROUTE_STATE_KEY = "coilCalcRouteState";
+    const ROUTE_MODE_KEY = "coilCalcRouteMode";
+    const ROUTE_MODE_STATE_KEY_PREFIX = "coilCalcRouteModeState";
+    const DEFAULT_PIPE_STANDARD = "DIN EN 10357, серия A (DIN 11850)";
+    const DEFAULT_ELBOW_TYPE = "DIN 11852 | 90° санитарно коляно EN 10357-A (табличен R)";
+    const V_YELLOW_MAX = 1.2;
+    const V_GREEN_MAX = 2.5;
     let lastProtocolData = null;
     let lastFormulaLines = [];
+    let lastHoldUpCipData = null;
+    let lastCipPumpData = null;
+    let lastRoutePumpData = null;
+    const lastRoutePumpDataByMode = { process: null, cip: null };
+    let routeHasUserResult = false;
+    let currentPumpMode = "process";
+    let currentRouteMode = "process";
 
     function fmt(value, digits = 3) {
       return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: digits, minimumFractionDigits: digits }) : "—";
@@ -167,9 +201,89 @@
       return "ok";
     }
 
+    function velocityTone(value) {
+      if (!Number.isFinite(value) || value <= 0) return "out";
+      if (value <= V_YELLOW_MAX) return "warn";
+      if (value <= V_GREEN_MAX) return "ok";
+      return "out";
+    }
+
+    function pressureTone(valueBar) {
+      if (!Number.isFinite(valueBar)) return "out";
+      if (valueBar <= 1.5) return "ok";
+      if (valueBar <= 3.0) return "warn";
+      return "out";
+    }
+
+    function cipRegimeTone(re) {
+      if (!Number.isFinite(re) || re < 2300) return "out";
+      if (re <= 10000) return "warn";
+      return "ok";
+    }
+
+    function cipRegimeText(re) {
+      if (!Number.isFinite(re) || re < 2300) return "Ламинарен - НЕЕФЕКТИВНО миене";
+      if (re <= 10000) return "Преходен - НЕНАДЕЖДНО миене";
+      return "Турбулентен - Ефективно миене";
+    }
+
+    function cipVerdict(velocity, re) {
+      if (velocity < 1.2 || re < 10000) return { label: "FAIL", tone: "out" };
+      if (velocity < 1.5 || re <= 12000) return { label: "MARGINAL", tone: "warn" };
+      return { label: "PASS", tone: "ok" };
+    }
+
+    function buildCipCheck(dInnerM, cipMinVelocity) {
+      const rho = 980;
+      const mu = 0.000430;
+      const area = Math.PI * Math.pow(dInnerM, 2) / 4;
+      const re = (rho * cipMinVelocity * dInnerM) / mu;
+      const qMinLh = cipMinVelocity * area * 3600 * 1000;
+      const verdict = cipVerdict(cipMinVelocity, re);
+
+      return {
+        rho,
+        mu,
+        re,
+        qMinLh,
+        regime: cipRegimeText(re),
+        regimeTone: cipRegimeTone(re),
+        verdict: verdict.label,
+        verdictTone: verdict.tone
+      };
+    }
+
+    function cipFluidProperties(tempC) {
+      const t = Math.min(80, Math.max(65, Number.isFinite(tempC) ? tempC : 65));
+      const ratio = (t - 65) / 15;
+      return {
+        tempC: t,
+        rho: 980 + ratio * (972 - 980),
+        mu: 0.000430 + ratio * (0.000355 - 0.000430)
+      };
+    }
+
+    function colebrookWhite(re, eps, d) {
+      if (!Number.isFinite(re) || re <= 0 || !Number.isFinite(d) || d <= 0) return 0;
+      if (re < 2300) return 64 / re;
+      let lambda = 0.02;
+      for (let i = 0; i < 24; i += 1) {
+        const denominator = -2 * Math.log10((eps / (3.71 * d)) + (2.51 / (re * Math.sqrt(lambda))));
+        const next = 1 / Math.pow(denominator, 2);
+        if (!Number.isFinite(next) || next <= 0) break;
+        if (Math.abs(next - lambda) < 1e-7) {
+          lambda = next;
+          break;
+        }
+        lambda = next;
+      }
+      return lambda;
+    }
+
     function bindGlobalTooltips() {
       const tooltip = document.getElementById("globalTooltip");
       if (!tooltip) return;
+      let pinnedTrigger = null;
 
       function placeTooltip(trigger) {
         const text = trigger.dataset.tip || "";
@@ -198,6 +312,10 @@
 
       function hideTooltip() {
         tooltip.classList.remove("visible");
+        if (pinnedTrigger) {
+          pinnedTrigger.setAttribute("aria-expanded", "false");
+          pinnedTrigger = null;
+        }
       }
 
       function tipFromEvent(event) {
@@ -211,7 +329,7 @@
       });
       document.addEventListener("mouseout", event => {
         const trigger = tipFromEvent(event);
-        if (!trigger || trigger.contains(event.relatedTarget)) return;
+        if (!trigger || trigger.contains(event.relatedTarget) || pinnedTrigger === trigger) return;
         hideTooltip();
       });
       document.addEventListener("focusin", event => {
@@ -219,7 +337,27 @@
         if (trigger) placeTooltip(trigger);
       });
       document.addEventListener("focusout", event => {
-        if (tipFromEvent(event)) hideTooltip();
+        const trigger = tipFromEvent(event);
+        if (trigger && pinnedTrigger !== trigger) hideTooltip();
+      });
+      document.addEventListener("click", event => {
+        const trigger = tipFromEvent(event);
+        if (!trigger) {
+          if (pinnedTrigger) hideTooltip();
+          return;
+        }
+        event.preventDefault();
+        if (pinnedTrigger === trigger && tooltip.classList.contains("visible")) {
+          hideTooltip();
+          return;
+        }
+        if (pinnedTrigger) pinnedTrigger.setAttribute("aria-expanded", "false");
+        pinnedTrigger = trigger;
+        pinnedTrigger.setAttribute("aria-expanded", "true");
+        placeTooltip(trigger);
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape") hideTooltip();
       });
 
       window.addEventListener("scroll", hideTooltip, true);
@@ -236,10 +374,12 @@
       applyRangeClass(document.getElementById("kElbow"), rangeTone(values.kElbow, 0.1, 2.0));
       applyRangeClass(document.getElementById("leqElbowLD"), rangeTone(values.leqElbowLD, 5, 120));
       applyRangeClass(document.getElementById("elbowRadiusD"), rangeTone(values.elbowRadiusD, 0.5, 5.0));
-      applyRangeClass(document.getElementById("targetSpeed"), rangeTone(values.targetSpeed, 0.3, 4.0));
-      applyRangeClass(document.getElementById("k11852"), rangeTone(values.k11852, 0.05, 8.0));
-      applyRangeClass(document.getElementById("k11851"), rangeTone(values.k11851, 0.05, 8.0));
-      applyRangeClass(document.getElementById("k32676"), rangeTone(values.k32676, 0.05, 8.0));
+      applyRangeClass(document.getElementById("targetSpeed"), velocityTone(values.targetSpeed));
+      applyRangeClass(document.getElementById("cipMin"), velocityTone(values.cipMin));
+      applyRangeClass(document.getElementById("cipMax"), velocityTone(values.cipMax));
+      if (document.getElementById("k11852")) applyRangeClass(document.getElementById("k11852"), rangeTone(values.k11852, 0.05, 8.0));
+      if (document.getElementById("k11851")) applyRangeClass(document.getElementById("k11851"), rangeTone(values.k11851, 0.05, 8.0));
+      if (document.getElementById("k32676")) applyRangeClass(document.getElementById("k32676"), rangeTone(values.k32676, 0.05, 8.0));
     }
 
     function manualChecked(id) {
@@ -304,17 +444,17 @@
       syncManualMode(["kElbow", "leqElbowLD", "elbowRadiusD"], manualElbow);
 
       const manual52 = manualChecked("manual11852");
-      const selected52 = fittingLibrary11852[lib11852Select.value];
+      const selected52 = lib11852Select ? fittingLibrary11852[lib11852Select.value] : null;
       if (!manual52 && selected52) document.getElementById("k11852").value = selected52.k;
       syncManualMode(["k11852"], manual52);
 
       const manual51 = manualChecked("manual11851");
-      const selected51 = fittingLibrary11851[lib11851Select.value];
+      const selected51 = lib11851Select ? fittingLibrary11851[lib11851Select.value] : null;
       if (!manual51 && selected51) document.getElementById("k11851").value = selected51.k;
       syncManualMode(["k11851"], manual51);
 
       const manual32676 = manualChecked("manual32676");
-      const selected32676 = fittingLibrary32676[lib32676Select.value];
+      const selected32676 = lib32676Select ? fittingLibrary32676[lib32676Select.value] : null;
       if (!manual32676 && selected32676) document.getElementById("k32676").value = selected32676.k;
       syncManualMode(["k32676"], manual32676);
     }
@@ -344,6 +484,7 @@
         pipeStandardSelect.appendChild(opt);
       });
 
+      pipeStandardSelect.value = DEFAULT_PIPE_STANDARD;
       pipeStandardSelect.addEventListener("change", fillPipeSizes);
       fillPipeSizes();
     }
@@ -355,12 +496,13 @@
         opt.textContent = name;
         elbowTypeSelect.appendChild(opt);
       });
-      elbowTypeSelect.value = "DIN 11852 | 90° санитарно коляно EN 10357-A (табличен R)";
+      elbowTypeSelect.value = DEFAULT_ELBOW_TYPE;
       updateElbowFromLibrary();
       elbowTypeSelect.addEventListener("change", updateElbowFromLibrary);
     }
 
     function fillFittingLibraries() {
+      if (!lib11852Select || !lib11851Select || !lib32676Select) return;
       fillOneFittingLibrary(lib11852Select, fittingLibrary11852, "DIN 11852 | По-консервативна стойност", update11852FromLibrary);
       fillOneFittingLibrary(lib11851Select, fittingLibrary11851, "DIN 11851 | Резбово съединение (типично)", update11851FromLibrary);
       fillOneFittingLibrary(lib32676Select, fittingLibrary32676, "DIN 32676 | Tri-clamp (типично)", update32676FromLibrary);
@@ -379,6 +521,7 @@
     }
 
     function update11852FromLibrary() {
+      if (!lib11852Select || !lib11852Info) return;
       const selected = fittingLibrary11852[lib11852Select.value];
       if (!selected) return;
       if (!manualChecked("manual11852")) {
@@ -389,6 +532,7 @@
     }
 
     function update11851FromLibrary() {
+      if (!lib11851Select || !lib11851Info) return;
       const selected = fittingLibrary11851[lib11851Select.value];
       if (!selected) return;
       if (!manualChecked("manual11851")) {
@@ -399,6 +543,7 @@
     }
 
     function update32676FromLibrary() {
+      if (!lib32676Select || !lib32676Info) return;
       const selected = fittingLibrary32676[lib32676Select.value];
       if (!selected) return;
       if (!manualChecked("manual32676")) {
@@ -480,6 +625,213 @@
       if (elbowTypeSelect.value) updateElbowFromLibrary();
     }
 
+    function seriesAPipes() {
+      return pipeSeries[DEFAULT_PIPE_STANDARD] || [];
+    }
+
+    function routeDefaultSegment() {
+      const components = {};
+      routeComponentLibrary.forEach(component => {
+        components[component.key] = { count: 0, zeta: component.zeta };
+      });
+      return {
+        dnIndex: 3,
+        length: 10,
+        elbows90: 2,
+        elbows45: 0,
+        teeThrough: 0,
+        teeBranch: 0,
+        expansionZeta: "",
+        contractionZeta: "",
+        components
+      };
+    }
+
+    function routeSegmentCount() {
+      return document.querySelectorAll(".route-segment").length;
+    }
+
+    function routeDnOptions(selectedIndex) {
+      return seriesAPipes().map((pipe, idx) => {
+        const id = pipe.od - 2 * pipe.t;
+        const selected = idx === Number(selectedIndex) ? " selected" : "";
+        return `<option value="${idx}"${selected}>${pipe.dn} | ID ${id.toFixed(1)} mm</option>`;
+      }).join("");
+    }
+
+    function routeComponentRows(segment, index) {
+      return routeComponentLibrary.map(component => {
+        const data = segment.components?.[component.key] || { count: 0, zeta: component.zeta };
+        return `
+          <div class="component-label">${component.label}<br>ζ=${fmt(component.zeta, 2)}</div>
+          <input class="route-component-count" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="1" value="${escapeAttr(data.count ?? 0)}" aria-label="${escapeAttr(component.label)} брой" />
+          <input class="route-component-zeta" data-route-index="${index}" data-component="${component.key}" type="number" min="0" step="0.01" value="${escapeAttr(data.zeta ?? component.zeta)}" aria-label="${escapeAttr(component.label)} ζ" />
+        `;
+      }).join("");
+    }
+
+    function routeSegmentHtml(segment, index) {
+      return `
+        <div class="route-segment" data-route-index="${index}">
+          <div class="route-segment-title">
+            <span>Сегмент ${index + 1}</span>
+            <span>EN 10357 Series A</span>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>DN</label>
+              <select class="route-dn">${routeDnOptions(segment.dnIndex)}</select>
+            </div>
+            <div class="field">
+              <label>Length [m]</label>
+              <input class="route-length" type="number" min="0" step="0.1" value="${escapeAttr(segment.length)}" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>90° elbows DIN 11852 (ζ=0.60)</label>
+              <input class="route-elbows90" type="number" min="0" step="1" value="${escapeAttr(segment.elbows90)}" />
+            </div>
+            <div class="field">
+              <label>45° elbows DIN 11852 (ζ=0.35)</label>
+              <input class="route-elbows45" type="number" min="0" step="1" value="${escapeAttr(segment.elbows45)}" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>T-pieces flow-through (ζ=0.30)</label>
+              <input class="route-tee-through" type="number" min="0" step="1" value="${escapeAttr(segment.teeThrough)}" />
+            </div>
+            <div class="field">
+              <label>T-pieces flow-branch (ζ=0.70)</label>
+              <input class="route-tee-branch" type="number" min="0" step="1" value="${escapeAttr(segment.teeBranch)}" />
+            </div>
+          </div>
+          <details>
+            <summary>Valve / fitting library</summary>
+            <div class="component-grid">
+              <div class="component-label">Компонент</div>
+              <div class="component-label">Брой</div>
+              <div class="component-label">ζ override</div>
+              ${routeComponentRows(segment, index)}
+              <div class="component-label">Sudden expansion (A1->A2)<br>ζ=(1-A1/A2)²; празно = auto</div>
+              <input type="number" min="0" step="1" value="1" readonly />
+              <input class="route-expansion-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.expansionZeta ?? "")}" aria-label="Sudden expansion ζ override" />
+              <div class="component-label">Sudden contraction (A1->A2)<br>ζ=0.5×(1-A2/A1); празно = auto</div>
+              <input type="number" min="0" step="1" value="1" readonly />
+              <input class="route-contraction-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.contractionZeta ?? "")}" aria-label="Sudden contraction ζ override" />
+            </div>
+          </details>
+        </div>
+      `;
+    }
+
+    function getRouteSegmentsState() {
+      return Array.from(document.querySelectorAll(".route-segment")).map(segmentEl => {
+        const components = {};
+        routeComponentLibrary.forEach(component => {
+          const countEl = segmentEl.querySelector(`.route-component-count[data-component="${component.key}"]`);
+          const zetaEl = segmentEl.querySelector(`.route-component-zeta[data-component="${component.key}"]`);
+          components[component.key] = {
+            count: parseFloat(countEl?.value) || 0,
+            zeta: parseFloat(zetaEl?.value) || component.zeta
+          };
+        });
+        return {
+          dnIndex: parseInt(segmentEl.querySelector(".route-dn")?.value, 10) || 0,
+          length: parseFloat(segmentEl.querySelector(".route-length")?.value) || 0,
+          elbows90: parseFloat(segmentEl.querySelector(".route-elbows90")?.value) || 0,
+          elbows45: parseFloat(segmentEl.querySelector(".route-elbows45")?.value) || 0,
+          teeThrough: parseFloat(segmentEl.querySelector(".route-tee-through")?.value) || 0,
+          teeBranch: parseFloat(segmentEl.querySelector(".route-tee-branch")?.value) || 0,
+          expansionZeta: segmentEl.querySelector(".route-expansion-zeta")?.value ?? "",
+          contractionZeta: segmentEl.querySelector(".route-contraction-zeta")?.value ?? "",
+          components
+        };
+      });
+    }
+
+    function saveRouteState() {
+      const state = {
+        mode: currentRouteMode,
+        feedsPump: routeHasUserResult,
+        segments: getRouteSegmentsState()
+      };
+      saveRouteModeInputs();
+      localStorage.setItem(ROUTE_STATE_KEY, JSON.stringify(state));
+    }
+
+    function loadRouteState() {
+      const raw = localStorage.getItem(ROUTE_STATE_KEY);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    function routeModeInputKey(mode = currentRouteMode) {
+      return `${ROUTE_MODE_STATE_KEY_PREFIX}:${mode}`;
+    }
+
+    function getRouteModeInputs() {
+      return {
+        flow: document.getElementById("routeFlow")?.value,
+        rho: document.getElementById("routeRho")?.value,
+        mu: document.getElementById("routeMu")?.value,
+        roughness: document.getElementById("routeRoughness")?.value
+      };
+    }
+
+    function saveRouteModeInputs(mode = currentRouteMode) {
+      localStorage.setItem(routeModeInputKey(mode), JSON.stringify(getRouteModeInputs()));
+    }
+
+    function loadRouteModeInputs(mode = currentRouteMode, fallback = null) {
+      let state = fallback;
+      const raw = localStorage.getItem(routeModeInputKey(mode));
+      if (raw) {
+        try {
+          state = JSON.parse(raw);
+        } catch (_err) {
+        }
+      }
+      if (!state) return;
+      setControlValue("routeFlow", state.flow);
+      setControlValue("routeRho", state.rho);
+      setControlValue("routeMu", state.mu);
+      setControlValue("routeRoughness", state.roughness);
+    }
+
+    function setRouteMode(mode, { markUserResult = false } = {}) {
+      saveRouteModeInputs(currentRouteMode);
+      currentRouteMode = mode === "cip" ? "cip" : "process";
+      localStorage.setItem(ROUTE_MODE_KEY, currentRouteMode);
+      document.querySelectorAll("[data-route-mode]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.routeMode === currentRouteMode);
+      });
+      loadRouteModeInputs(currentRouteMode);
+      renderRouteCalc({ markUserResult });
+    }
+
+    function renderRouteSegments(segments = null) {
+      const target = document.getElementById("routeSegments");
+      if (!target) return;
+      const data = (segments && segments.length ? segments : [routeDefaultSegment()]).slice(0, 10);
+      target.innerHTML = data.map(routeSegmentHtml).join("");
+      target.querySelectorAll("input, select").forEach(el => {
+        el.addEventListener("input", () => {
+          saveRouteState();
+          renderRouteCalc({ markUserResult: true });
+        });
+        el.addEventListener("change", () => {
+          saveRouteState();
+          renderRouteCalc({ markUserResult: true });
+        });
+      });
+    }
+
     function frictionFactorTurbulent(re, eps, d) {
       const rel = eps / d;
       return 0.25 / Math.pow(Math.log10((rel / 3.7) + (5.74 / Math.pow(re, 0.9))), 2);
@@ -538,15 +890,15 @@
 
       const kElbowsOnly = elbows90 * inputs.kElbow;
       const kIO = inputs.includeIO ? 1.5 : 0;
-      const k11852 = inputs.use11852 ? inputs.count11852 * inputs.k11852 : 0;
-      const k11851 = inputs.use11851 ? inputs.count11851 * inputs.k11851 : 0;
-      const k32676 = inputs.use32676 ? inputs.count32676 * inputs.k32676 : 0;
+      const k11852 = 0;
+      const k11851 = 0;
+      const k32676 = 0;
       const kExtras = k11852 + k11851 + k32676;
       const kTotal = kElbowsOnly + kIO + kExtras;
 
       const leqElbows = elbows90 * inputs.leqElbowLD * d;
       const leqIO = (inputs.lossMethod === "leq" && inputs.includeIO && f > 0) ? (kIO / f) * d : 0;
-      const leqExtras = (inputs.lossMethod === "leq" && f > 0) ? (kExtras / f) * d : 0;
+      const leqExtras = 0;
 
       const dyn = inputs.rho * Math.pow(velocity, 2) / 2;
       const dpLinear = f * (length / d) * dyn;
@@ -594,6 +946,7 @@
     }
 
     function renderProfiles(profiles, cipMin, cipMax) {
+      if (!profileTable) return;
       profileTable.innerHTML = profiles.map(p => {
         const status = cipStatus(p.velocity, cipMin, cipMax);
         return `<tr>
@@ -752,6 +1105,7 @@
 
     function drawSpeedChart(profiles, cipMin, cipMax) {
       const canvas = document.getElementById("speedChart");
+      if (!canvas) return;
       const ctx = canvas.getContext("2d");
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.clientWidth || 520;
@@ -827,12 +1181,85 @@
       }
     }
 
+    function normalizeInletOutletExtensionControl() {
+      const el = document.getElementById("inletOutletExtension");
+      if (!el) return;
+      const value = parseFloat(el.value);
+      if (Number.isFinite(value) && value > 20) {
+        el.value = value / 1000;
+      }
+    }
+
+    function getActiveOptionalComponentCount() {
+      return [
+        ["use11852", "count11852"],
+        ["use11851", "count11851"],
+        ["use32676", "count32676"]
+      ].reduce((total, [useId, countId]) => {
+        const isEnabled = document.getElementById(useId)?.checked;
+        const count = parseFloat(document.getElementById(countId)?.value) || 0;
+        return total + (isEnabled && count > 0 ? count : 0);
+      }, 0);
+    }
+
+    function updateOptionalComponentsBadge() {
+      const badge = document.getElementById("optionalComponentsBadge");
+      if (!badge) return;
+      const count = getActiveOptionalComponentCount();
+      badge.hidden = count <= 0;
+      if (count > 0) {
+        badge.textContent = `Активни: ${fmt(count, 0)}`;
+      }
+    }
+
+    function bindOptionalComponentsBadge() {
+      ["use11852", "count11852", "use11851", "count11851", "use32676", "count32676"]
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener("input", updateOptionalComponentsBadge);
+          el.addEventListener("change", updateOptionalComponentsBadge);
+        });
+      updateOptionalComponentsBadge();
+    }
+
+    function isCipLinked() {
+      return localStorage.getItem(CIP_LINKED_KEY) !== "standalone";
+    }
+
+    function setCipLinkedMode(isLinked) {
+      localStorage.setItem(CIP_LINKED_KEY, isLinked ? "linked" : "standalone");
+      document.getElementById("cipLinkedBtn")?.classList.toggle("active", isLinked);
+      document.getElementById("cipStandaloneBtn")?.classList.toggle("active", !isLinked);
+      ["cipDiameter", "cipRouteLength", "cipVolume"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.readOnly = isLinked;
+      });
+      syncCipLinkedInputs();
+      renderCipCalc();
+    }
+
+    function syncCipLinkedInputs() {
+      if (!isCipLinked() || !lastHoldUpCipData) return;
+      setControlValue("cipDiameter", lastHoldUpCipData.d_mm);
+      setControlValue("cipRouteLength", lastHoldUpCipData.length_m);
+      setControlValue("cipVolume", lastHoldUpCipData.volume_l);
+      saveFormState();
+    }
+
+    function bindCipModeToggle() {
+      document.getElementById("cipLinkedBtn")?.addEventListener("click", () => setCipLinkedMode(true));
+      document.getElementById("cipStandaloneBtn")?.addEventListener("click", () => setCipLinkedMode(false));
+      setCipLinkedMode(isCipLinked());
+    }
+
     function getCurrentFormState() {
       const ids = [
         "flow", "retention", "fluid", "rho", "mu", "pipeStandard", "pipeSize", "roughness", "straightSeg",
         "lossMethod", "elbowType", "manualElbowData", "kElbow", "leqElbowLD", "elbowRadiusD", "inletOutletExtension", "includeIO", "cipMin", "cipMax", "targetSpeed",
         "use11852", "lib11852", "count11852", "k11852",
         "manual11852", "use11851", "lib11851", "count11851", "k11851",
+        "cipDiameter", "cipRouteLength", "cipVolume", "cipTemp", "cipCycles",
         "manual11851", "use32676", "lib32676", "count32676", "k32676", "manual32676"
       ];
       const state = {};
@@ -864,10 +1291,12 @@
           [
             "flow", "retention", "fluid", "rho", "mu", "roughness", "straightSeg", "lossMethod", "manualElbowData", "kElbow", "leqElbowLD", "elbowRadiusD", "inletOutletExtension",
             "includeIO", "cipMin", "cipMax", "targetSpeed", "elbowType",
+            "cipDiameter", "cipRouteLength", "cipVolume", "cipTemp", "cipCycles",
             "use11852", "lib11852", "manual11852", "count11852", "k11852",
             "use11851", "lib11851", "manual11851", "count11851", "k11851",
             "use32676", "lib32676", "manual32676", "count32676", "k32676"
           ].forEach(id => setControlValue(id, state[id]));
+          normalizeInletOutletExtensionControl();
 
           updateElbowFromLibrary();
           update11852FromLibrary();
@@ -911,9 +1340,9 @@
 
         if (i.fluid && fluidDb[i.fluid]) fluidSelect.value = i.fluid;
         if (i.elbowType && elbowLibrary[i.elbowType]) elbowTypeSelect.value = i.elbowType;
-        if (i.lib11852 && fittingLibrary11852[i.lib11852]) lib11852Select.value = i.lib11852;
-        if (i.lib11851 && fittingLibrary11851[i.lib11851]) lib11851Select.value = i.lib11851;
-        if (i.lib32676 && fittingLibrary32676[i.lib32676]) lib32676Select.value = i.lib32676;
+        if (lib11852Select && i.lib11852 && fittingLibrary11852[i.lib11852]) lib11852Select.value = i.lib11852;
+        if (lib11851Select && i.lib11851 && fittingLibrary11851[i.lib11851]) lib11851Select.value = i.lib11851;
+        if (lib32676Select && i.lib32676 && fittingLibrary32676[i.lib32676]) lib32676Select.value = i.lib32676;
 
         setControlValue("flow", i.q_l_h);
         setControlValue("retention", i.t);
@@ -926,9 +1355,15 @@
         setControlValue("leqElbowLD", i.leqElbowLD);
         setControlValue("elbowRadiusD", i.elbowRadiusD);
         setControlValue("inletOutletExtension", i.inletOutletExtensionMm);
+        normalizeInletOutletExtensionControl();
         setControlValue("cipMin", i.cipMin);
         setControlValue("cipMax", i.cipMax);
         setControlValue("targetSpeed", i.targetSpeed);
+        setControlValue("cipDiameter", i.cipDiameter);
+        setControlValue("cipRouteLength", i.cipRouteLength);
+        setControlValue("cipVolume", i.cipVolume);
+        setControlValue("cipTemp", i.cipTemp);
+        setControlValue("cipCycles", i.cipCycles);
         setControlValue("count11852", i.count11852);
         setControlValue("k11852", i.k11852);
         setControlValue("count11851", i.count11851);
@@ -970,6 +1405,15 @@
       localStorage.removeItem("coilCalcData");
       localStorage.removeItem("coilCalcUpdatedAt");
       localStorage.removeItem(FORM_STATE_KEY);
+      localStorage.removeItem(CIP_LINKED_KEY);
+      localStorage.removeItem(PUMP_MODE_KEY);
+      localStorage.removeItem(ROUTE_STATE_KEY);
+      localStorage.removeItem(ROUTE_MODE_KEY);
+      ["process", "cip"].forEach(mode => localStorage.removeItem(routeModeInputKey(mode)));
+      ["process", "cip", "routeProcess", "routeCip", "test"].forEach(mode => {
+        localStorage.removeItem(pumpLinkKey(mode));
+        localStorage.removeItem(pumpStateKey(mode));
+      });
       window.location.reload();
     }
 
@@ -998,6 +1442,7 @@
     }
 
     function renderRecommendation(rec, targetSpeed, cipMin, cipMax) {
+      if (!recommendationBox) return;
       const p = rec.pick;
       if (!p) {
         recommendationBox.textContent = "Няма валидни профили за препоръка.";
@@ -1037,11 +1482,11 @@
         ? `Lколяно = (π/2) · ${fmt(report.elbowRadius_mm, 1)} mm = ${fmt(report.elbowArcLength_m, 4)} m`
         : `Lколяно = (π/2) · ${fmt(report.elbowRadiusD, 2)} · ${fmt(dM, 4)} m = ${fmt(report.elbowArcLength_m, 4)} m`;
       const lossFormula = report.lossMethod.startsWith("Leq")
-        ? "Lхидр = L + nколена · (L/D)коляно · Dᵢ + Leq(вх/изх) + Leq(доп.)"
-        : "ΣK = nколена · K90 + Kвх/изх + Kдоп.; Δpлок = ΣK · ρv²/2";
+        ? "Lхидр = L + nколена · (L/D)коляно · Dᵢ"
+        : "ΣK = nколена · K90; Δpлок = ΣK · ρv²/2";
       const lossSubstitution = report.lossMethod.startsWith("Leq")
-        ? `Lхидр = ${fmt(report.length_m, 3)} + ${report.elbows90} · ${fmt(report.leqElbowLD, 1)} · ${fmt(dM, 4)} + ${fmt(report.leqIO_m, 3)} + ${fmt(report.leqExtras_m, 3)} = ${fmt(report.lHydraulicTotal_m, 3)} m`
-        : `ΣK = ${report.elbows90} · ${fmt(report.kElbow, 2)} + ${fmt(report.kIO, 2)} + ${fmt(report.kExtras, 2)} = ${fmt(report.kTotal, 3)}; Δpлок = ${fmt(report.kTotal, 3)} · ${fmt(dyn, 2)} = ${fmt(report.dpLocal_kpa * 1000, 2)} Pa`;
+        ? `Lхидр = ${fmt(report.length_m, 3)} + ${report.elbows90} · ${fmt(report.leqElbowLD, 1)} · ${fmt(dM, 4)} = ${fmt(report.lHydraulicTotal_m, 3)} m`
+        : `ΣK = ${report.elbows90} · ${fmt(report.kElbow, 2)} = ${fmt(report.kTotal, 3)}; Δpлок = ${fmt(report.kTotal, 3)} · ${fmt(dyn, 2)} = ${fmt(report.dpLocal_kpa * 1000, 2)} Pa`;
 
       return [
         formulaBlock(
@@ -1141,14 +1586,8 @@
         ["Плътност / вискозитет", `${fmt(report.rho,1)} kg/m³ / ${fmt(report.mu_mpa_s,3)} mPa·s`],
         ["CIP диапазон", `${fmt(report.cipMin,2)} – ${fmt(report.cipMax,2)} m/s`],
         ["Метод колена", `${report.lossMethod}`],
-        ["Коляно 90°", `${report.elbowType}; K=${fmt(report.kElbow,2)}; (L/D)=${fmt(report.leqElbowLD,1)}; R=${fmt(report.elbowRadius_mm,1)} mm; R/D=${fmt(report.elbowRadiusD,2)}${report.elbowRadiusIsTabular ? " (таблично)" : ""}; вход/изход=${report.includeIO ? "Да" : "Не"}`],
-        ["Геометрия вход/изход", `удължение=${fmt(report.inletOutletExtensionMm,0)} mm; дължина=${fmt(report.inletOutletLength_m,3)} m`],
-        ["DIN 11852", `${report.use11852 ? "Да" : "Не"}; брой=${fmt(report.count11852,0)}; K/бр=${fmt(report.k11852Single,2)}`],
-        ["DIN 11851", `${report.use11851 ? "Да" : "Не"}; брой=${fmt(report.count11851,0)}; K/бр=${fmt(report.k11851Single,2)}`],
-        ["DIN 32676", `${report.use32676 ? "Да" : "Не"}; брой=${fmt(report.count32676,0)}; K/бр=${fmt(report.k32676Single,2)}`],
-        ["Избор DIN 11852", `${report.lib11852}`],
-        ["Избор DIN 11851", `${report.lib11851}`],
-        ["Избор DIN 32676", `${report.lib32676}`]
+        ["Коляно 90°", `${report.elbowType}; K=${fmt(report.kElbow,2)}; (L/D)=${fmt(report.leqElbowLD,1)}; R=${fmt(report.elbowRadius_mm,1)} mm; R/D=${fmt(report.elbowRadiusD,2)}${report.elbowRadiusIsTabular ? " (таблично)" : ""}`],
+        ["Геометрия вход/изход", `удължение=${fmt(report.inletOutletExtension_m,3)} m; дължина=${fmt(report.inletOutletLength_m,3)} m`]
       ];
 
       const results = [
@@ -1166,15 +1605,12 @@
         ["Скорост", `${fmt(report.velocity_m_s,3)} m/s`],
         ["Уделна задръжка", `${fmt(report.retention_s_l,3)} s/L`],
         ["Re / f", `${fmt(report.re,0)} / ${fmt(report.f,5)}`],
-        ["ΣK / Kколена / Kвх-изх", `${fmt(report.kTotal,3)} / ${fmt(report.kElbowsOnly,3)} / ${fmt(report.kIO,3)}`],
-        ["Leq колена / Leq вх-изх", `${fmt(report.leqElbows_m,3)} m / ${fmt(report.leqIO_m,3)} m`],
-        ["Leq доп. фитинги", `${fmt(report.leqExtras_m,3)} m`],
+        ["ΣK / Kколена", `${fmt(report.kTotal,3)} / ${fmt(report.kElbowsOnly,3)}`],
+        ["Leq колена", `${fmt(report.leqElbows_m,3)} m`],
         ["Динамично налягане ρv²/2", `${fmt(report.dynamicPa,2)} Pa`],
         ["Общ пад на налягане", `${fmt(report.dpTotal_pa,2)} Pa | ${fmt(report.dpTotal_kpa,2)} kPa | ${fmt(report.dpTotal_bar,4)} bar`],
         ["Линейни загуби", `${fmt(report.dpLinear_kpa,2)} kPa`],
         ["Загуби в колена", `${fmt(report.dpElbows_kpa,2)} kPa`],
-        ["Загуби вход/изход", `${fmt(report.dpIO_kpa,2)} kPa`],
-        ["Загуби доп. фитинги", `${fmt(report.dpExtras_kpa,2)} kPa`],
         ["Локални загуби общо", `${fmt(report.dpLocal_kpa,2)} kPa`],
         ["Препоръчан DN", `${report.recDN} | v=${fmt(report.recV,3)} m/s | Δp=${fmt(report.recDp,4)} bar`]
       ];
@@ -1398,86 +1834,120 @@
       }
 
       if (document.getElementById("protocolCip")?.checked) {
-        const flow = num("cipFlow", 0);
-        const d = num("cipDiameter", 1);
+        if (isCipLinked()) syncCipLinkedInputs();
+        const dMm = num("cipDiameter", 1);
         const length = num("cipRouteLength", 0);
-        const totalK = num("cipTotalK", 0);
-        const rho = num("cipRho", 998);
-        const mu = num("cipMu", 1);
-        const eps = num("cipRoughness", 0.0015);
+        const volumeL = num("cipVolume", 0);
         const minV = num("cipMin", 1.5);
-        const r = genericHydraulic(flow, d, length, totalK, rho, mu, eps);
-        const neededFlowLh = minV * r.area * 3600 * 1000;
+        const temp = num("cipTemp", 65);
+        const cycles = Math.max(1, Math.round(num("cipCycles", 1)));
+        const props = cipFluidProperties(temp);
+        const d = dMm / 1000;
+        const area = Math.PI * Math.pow(d, 2) / 4;
+        const eps = ((lastHoldUpCipData?.roughness_mm ?? num("roughness", 0.0015)) || 0.0015) / 1000;
+        const totalK = lastHoldUpCipData?.kTotal || 0;
+        const re = (props.rho * minV * d) / props.mu;
+        const lambda = colebrookWhite(re, eps, d);
+        const dyn = props.rho * Math.pow(minV, 2) / 2;
+        const dpFriction = lambda * (length / d) * dyn;
+        const dpLocal = totalK * dyn;
+        const dpTotal = dpFriction + dpLocal;
+        const neededFlowLh = minV * area * 3600 * 1000;
+        const qLs = neededFlowLh / 3600;
+        const flushTime = qLs > 0 ? volumeL / qLs : 0;
+        const verdict = cipVerdict(minV, re);
         sections.push({
           title: "CIP миене",
           rows: [
-            ["CIP дебит", `${fmt(flow, 0)} L/h`],
-            ["ID / дължина / ΣK", `${fmt(d, 1)} mm / ${fmt(length, 2)} m / ${fmt(totalK, 2)}`],
-            ["Плътност / вискозитет", `${fmt(rho, 1)} kg/m³ / ${fmt(mu, 2)} mPa·s`],
-            ["Скорост", `${fmt(r.velocity, 3)} m/s`],
-            ["Минимален дебит за целта", `${fmt(neededFlowLh, 0)} L/h`],
-            ["Re / f", `${fmt(r.re, 0)} / ${fmt(r.f, 4)}`],
-            ["Пад по дължина / локални", `${fmt(r.dpLinear / 1000, 2)} kPa / ${fmt(r.dpLocal / 1000, 2)} kPa`],
-            ["Общо Δp", `${fmt(r.dpBar, 4)} bar`]
+            ["Режим", isCipLinked() ? "Свързан със задръжката" : "Самостоятелен"],
+            ["ID / дължина / обем", `${fmt(dMm, 1)} mm / ${fmt(length, 2)} m / ${fmt(volumeL, 2)} L`],
+            ["Температура / свойства", `${fmt(props.tempC, 0)} °C; ρ=${fmt(props.rho, 1)} kg/m³; μ=${fmt(props.mu, 6)} Pa·s`],
+            ["CIP min / max", `${fmt(minV, 3)} / ${fmt(num("cipMax", V_GREEN_MAX), 3)} m/s`],
+            ["Статус", `${verdict.label}; ${cipRegimeText(re)}`],
+            ["Минимален дебит за CIP", `${fmt(neededFlowLh, 0)} L/h`],
+            ["Re / λ", `${fmt(re, 0)} / ${fmt(lambda, 5)}`],
+            ["Δp триене / локални", `${fmt(dpFriction / 100000, 4)} bar / ${fmt(dpLocal / 100000, 4)} bar`],
+            ["Общо Δp", `${fmt(dpTotal / 100000, 4)} bar`],
+            ["Време за промиване", `${fmt(flushTime, 1)} s за 1 обем; ${fmt(flushTime * cycles, 1)} s общо`]
           ],
           formulas: [
             formulaBlock(
-              "Преобразуване на CIP дебит",
-              "Q = Q_L/h / (1000 · 3600)",
-              `Q = ${fmt(flow, 0)} / (1000 · 3600) = ${fmt(flow / 1000 / 3600, 6)} m³/s`
+              "Минимален дебит за CIP",
+              "Qmin = vmin · (πD²/4) · 3 600 000",
+              `Qmin = ${fmt(minV, 3)} · ${fmt(area, 6)} · 3 600 000 = ${fmt(neededFlowLh, 0)} L/h`
             ),
             formulaBlock(
-              "Сечение и скорост",
-              "A = πDᵢ²/4; v = Q/A",
-              `A = π · (${fmt(d / 1000, 4)})² / 4 = ${fmt(r.area, 6)} m²; v = ${fmt(flow / 1000 / 3600, 6)} / ${fmt(r.area, 6)} = ${fmt(r.velocity, 3)} m/s`
+              "Reynolds CIP",
+              "Re = ρ·v·D/μ",
+              `Re = ${fmt(props.rho, 1)} · ${fmt(minV, 3)} · ${fmt(d, 4)} / ${fmt(props.mu, 6)} = ${fmt(re, 0)}`
             ),
             formulaBlock(
-              "Минимален дебит за зададена CIP скорост",
-              "Qmin = vmin · A · 3600 · 1000",
-              `Qmin = ${fmt(minV, 2)} · ${fmt(r.area, 6)} · 3600 · 1000 = ${fmt(neededFlowLh, 0)} L/h`
+              "Colebrook-White",
+              "1/√λ = -2·log(ε/(3.71·D) + 2.51/(Re·√λ))",
+              `λ = ${fmt(lambda, 5)} при ε=${fmt(eps, 6)} m`
             ),
             formulaBlock(
               "Пад на налягане",
-              "Δp = f(L/Dᵢ)ρv²/2 + ΣK·ρv²/2",
-              `Δp = ${fmt(r.dpLinear, 2)} + ${fmt(r.dpLocal, 2)} = ${fmt(r.dpTotal, 2)} Pa`,
-              `${fmt(r.dpBar, 4)} bar`
+              "Δp = λ(L/D)ρv²/2 + Σζ·ρv²/2",
+              `Δp = ${fmt(dpFriction, 2)} + ${fmt(dpLocal, 2)} = ${fmt(dpTotal, 2)} Pa`,
+              `${fmt(dpTotal / 100000, 4)} bar`
             )
           ]
         });
       }
 
       if (document.getElementById("protocolPumps")?.checked) {
-        const flowLh = num("pumpFlow", 0);
-        const dpBar = num("pumpDp", 0);
-        const staticHead = num("pumpStaticHead", 0);
-        const reserve = num("pumpReserve", 0) / 100;
-        const efficiency = Math.max(num("pumpEfficiency", 55) / 100, 0.01);
+        syncPumpLinkedInputs();
+        const flowLhBase = num("pumpFlow", 0);
+        const isCipPumpMode = currentPumpMode === "cip" || currentPumpMode === "routeCip";
+        const flowLh = isCipPumpMode ? flowLhBase * 1.15 : flowLhBase;
         const rho = num("pumpRho", 1000);
+        const mu = num("pumpMu", 0.001);
+        const d = num("pumpDiameter", 1) / 1000;
+        const length = num("pumpLength", 0);
         const q = flowLh / 1000 / 3600;
-        const frictionHead = (dpBar * 100000) / (rho * 9.80665);
-        const totalHead = (frictionHead + staticHead) * (1 + reserve);
+        const area = Math.PI * Math.pow(d, 2) / 4;
+        const velocity = area > 0 ? q / area : 0;
+        const re = mu > 0 ? (rho * velocity * d) / mu : 0;
+        const lambda = colebrookWhite(re, num("pumpRoughness", 0.0015) / 1000, d);
+        const velocityHead = Math.pow(velocity, 2) / (2 * 9.80665);
+        const hFriction = d > 0 ? lambda * (length / d) * velocityHead : 0;
+        const staticHead = num("pumpStaticHead", 0);
+        const hLocal = num("pumpTotalK", 0) * velocityHead;
+        const hExtra = num("pumpExtraHead", 0) + (num("pumpBackPressure", 0) * 100000) / (rho * 9.80665);
+        const hSafety = (hFriction + staticHead + hLocal + hExtra) * 0.10;
+        const totalHead = hFriction + staticHead + hLocal + hExtra + hSafety;
+        const efficiency = Math.min(0.8, Math.max(0.4, num("pumpEfficiency", 0.65)));
         const hydraulicPower = rho * 9.80665 * q * totalHead;
         const shaftPower = hydraulicPower / efficiency;
+        const pumpModeLabel = {
+          process: "Задръжка - работа",
+          cip: "Задръжка - CIP",
+          routeProcess: "Трасе - работа",
+          routeCip: "Трасе - CIP",
+          test: "Тестов режим"
+        }[currentPumpMode] || currentPumpMode;
         sections.push({
           title: "Избор на помпа",
           rows: [
-            ["Работен дебит", `${fmt(flowLh / 1000, 3)} m³/h`],
-            ["Пад / статичен напор", `${fmt(dpBar, 3)} bar / ${fmt(staticHead, 2)} m`],
-            ["Резерв / КПД", `${fmt(reserve * 100, 0)} % / ${fmt(efficiency * 100, 0)} %`],
-            ["Работен напор H", `${fmt(totalHead, 2)} m`],
+            ["Режим", pumpModeLabel],
+            ["Дебит", `${fmt(flowLh / 1000, 3)} m³/h (${fmt(flowLh / 3600, 3)} L/s)`],
+            ["H_friction / H_static / H_local", `${fmt(hFriction, 2)} / ${fmt(staticHead, 2)} / ${fmt(hLocal, 2)} m`],
+            ["H_extra / H_safety", `${fmt(hExtra, 2)} / ${fmt(hSafety, 2)} m`],
+            ["Общ напор / Δp", `${fmt(totalHead, 2)} m / ${fmt((rho * 9.80665 * totalHead) / 100000, 3)} bar`],
             ["Хидравлична мощност", `${fmt(hydraulicPower / 1000, 3)} kW`],
             ["Ориентировъчна мощност на вала", `${fmt(shaftPower / 1000, 3)} kW`]
           ],
           formulas: [
             formulaBlock(
-              "Преобразуване на пад в напор",
-              "Hтр = Δp/(ρg)",
-              `Hтр = ${fmt(dpBar, 3)} · 100000 / (${fmt(rho, 1)} · 9.80665) = ${fmt(frictionHead, 2)} m`
+              "Общ напор",
+              "H = H_friction + H_static + H_local + H_extra + H_safety",
+              `H = ${fmt(hFriction, 2)} + ${fmt(staticHead, 2)} + ${fmt(hLocal, 2)} + ${fmt(hExtra, 2)} + ${fmt(hSafety, 2)} = ${fmt(totalHead, 2)} m`
             ),
             formulaBlock(
-              "Работен напор с резерв",
-              "H = (Hтр + Hстат.) · (1 + резерв)",
-              `H = (${fmt(frictionHead, 2)} + ${fmt(staticHead, 2)}) · (1 + ${fmt(reserve, 2)}) = ${fmt(totalHead, 2)} m`
+              "Darcy-Weisbach",
+              "H_friction = λ(L/D)v²/(2g); H_local = Σζv²/(2g)",
+              `λ=${fmt(lambda, 5)}; v=${fmt(velocity, 3)} m/s; Re=${fmt(re, 0)}`
             ),
             formulaBlock(
               "Мощност на помпата",
@@ -1490,44 +1960,27 @@
 
       if (document.getElementById("protocolRoutes")?.checked) {
         const flow = num("routeFlow", 0);
-        const d = num("routeDiameter", 1);
-        const length = num("routeLength", 0);
-        const elbows = num("routeElbows", 0);
-        const valves = num("routeValves", 0);
-        const tees = num("routeTees", 0);
-        const otherK = num("routeOtherK", 0);
         const rho = num("routeRho", 998);
         const mu = num("routeMu", 1);
-        const eps = num("routeRoughness", 0.0015);
-        const totalK = elbows * 0.9 + valves * 2.5 + tees * 1.5 + otherK;
-        const r = genericHydraulic(flow, d, length, totalK, rho, mu, eps);
+        renderRouteCalc({ markUserResult: routeHasUserResult });
         sections.push({
           title: "Тръбно трасе",
           rows: [
-            ["Дебит / ID / дължина", `${fmt(flow, 0)} L/h / ${fmt(d, 1)} mm / ${fmt(length, 2)} m`],
-            ["Колена / вентили / тройници", `${fmt(elbows, 0)} / ${fmt(valves, 0)} / ${fmt(tees, 0)}`],
-            ["Други K / общо ΣK", `${fmt(otherK, 2)} / ${fmt(totalK, 2)}`],
-            ["Скорост", `${fmt(r.velocity, 3)} m/s`],
-            ["Re / f", `${fmt(r.re, 0)} / ${fmt(r.f, 4)}`],
-            ["Пад по дължина / елементи", `${fmt(r.dpLinear / 1000, 2)} kPa / ${fmt(r.dpLocal / 1000, 2)} kPa`],
-            ["Общо Δp", `${fmt(r.dpBar, 4)} bar`]
+            ["Дебит / свойства", `${fmt(flow, 0)} L/h / ρ=${fmt(rho, 1)} kg/m³ / μ=${fmt(mu, 2)} mPa·s`],
+            ["Сегменти / дължина", `${getRouteSegmentsState().length} / ${fmt(lastRoutePumpData?.length_m || 0, 2)} m`],
+            ["Общо Σζ", `${fmt(lastRoutePumpData?.kTotal || 0, 2)}`],
+            ["Общо Δp", `${fmt(lastRoutePumpData?.dp_bar || 0, 4)} bar`]
           ],
           formulas: [
             formulaBlock(
-              "Сума на локалните съпротивления",
-              "ΣK = nколена·0.9 + nвентили·2.5 + nтройници·1.5 + Kдруги",
-              `ΣK = ${fmt(elbows, 0)}·0.9 + ${fmt(valves, 0)}·2.5 + ${fmt(tees, 0)}·1.5 + ${fmt(otherK, 2)} = ${fmt(totalK, 2)}`
+              "Сегментна методика",
+              "Δp_seg = (λ·L/D + Σζ)·ρv²/2",
+              "λ се смята итеративно по Colebrook-White за всеки сегмент; Δp_total = ΣΔp_seg."
             ),
             formulaBlock(
-              "Скорост в трасето",
-              "A = πDᵢ²/4; v = Q/A",
-              `A = ${fmt(r.area, 6)} m²; v = ${fmt(flow / 1000 / 3600, 6)} / ${fmt(r.area, 6)} = ${fmt(r.velocity, 3)} m/s`
-            ),
-            formulaBlock(
-              "Пад на налягане в трасето",
-              "Δp = f(L/Dᵢ)ρv²/2 + ΣK·ρv²/2",
-              `Δp = ${fmt(r.dpLinear, 2)} + ${fmt(r.dpLocal, 2)} = ${fmt(r.dpTotal, 2)} Pa`,
-              `${fmt(r.dpBar, 4)} bar`
+              "Общо трасе",
+              "Δp_total = ΣΔp_seg",
+              `Δp_total = ${fmt(lastRoutePumpData?.dp_bar || 0, 4)} bar`
             )
           ]
         });
@@ -1699,26 +2152,26 @@
       const elbowRadiusD = libraryOrManual("manualElbowData", "elbowRadiusD", elbowLibrary, elbowTypeSelect, "radiusD");
       const selectedElbow = elbowLibrary[elbowTypeSelect.value];
       const elbowRadiusMmByDn = manualChecked("manualElbowData") ? null : selectedElbow?.radiusMmByDn || null;
-      const inletOutletExtensionMm = parseFloat(document.getElementById("inletOutletExtension").value) || 0;
-      const inletOutletExtensionM = inletOutletExtensionMm / 1000;
-      const includeIO = document.getElementById("includeIO").checked;
-      const use11852 = document.getElementById("use11852").checked;
-      const count11852 = parseFloat(document.getElementById("count11852").value) || 0;
-      const k11852 = libraryOrManual("manual11852", "k11852", fittingLibrary11852, lib11852Select, "k");
-      const lib11852 = lib11852Select.value;
-      const use11851 = document.getElementById("use11851").checked;
-      const count11851 = parseFloat(document.getElementById("count11851").value) || 0;
-      const k11851 = libraryOrManual("manual11851", "k11851", fittingLibrary11851, lib11851Select, "k");
-      const lib11851 = lib11851Select.value;
-      const use32676 = document.getElementById("use32676").checked;
-      const count32676 = parseFloat(document.getElementById("count32676").value) || 0;
-      const k32676 = libraryOrManual("manual32676", "k32676", fittingLibrary32676, lib32676Select, "k");
-      const lib32676 = lib32676Select.value;
+      const inletOutletExtensionM = parseFloat(document.getElementById("inletOutletExtension").value) || 0;
+      const inletOutletExtensionMm = inletOutletExtensionM * 1000;
+      const includeIO = false;
+      const use11852 = false;
+      const count11852 = 0;
+      const k11852 = 0;
+      const lib11852 = "";
+      const use11851 = false;
+      const count11851 = 0;
+      const k11851 = 0;
+      const lib11851 = "";
+      const use32676 = false;
+      const count32676 = 0;
+      const k32676 = 0;
+      const lib32676 = "";
       const cipMin = parseFloat(document.getElementById("cipMin").value);
       const cipMax = parseFloat(document.getElementById("cipMax").value);
       const targetSpeed = parseFloat(document.getElementById("targetSpeed").value);
 
-      updateInputBoundaryColors({ roughness_mm, kElbow, leqElbowLD, elbowRadiusD, targetSpeed, k11852, k11851, k32676 });
+      updateInputBoundaryColors({ roughness_mm, kElbow, leqElbowLD, elbowRadiusD, cipMin, cipMax, targetSpeed, k11852, k11851, k32676 });
 
       if (cipMin >= cipMax) {
         alert("CIP минимална скорост трябва да е по-малка от максималната.");
@@ -1752,6 +2205,19 @@
       const allProfiles = selectedSeries.map(pipe => calculateForPipe(pipe, inputs)).filter(Boolean);
       const recommendation = recommendPipe(allProfiles, targetSpeed, cipMin, cipMax);
       const workPump = pumpEstimate(q, main.dpTotal, rho);
+      lastHoldUpCipData = {
+        q_l_h,
+        d_mm: main.d_mm,
+        length_m: main.length,
+        volume_l: main.volume_l,
+        dp_bar: main.dpTotalBar,
+        kTotal: main.kTotal,
+        rho,
+        mu,
+        roughness_mm,
+        source: `${p.dn} | ${fmt(main.d_mm, 1)} mm ID`
+      };
+      syncCipLinkedInputs();
 
       renderMetrics({
         q,
@@ -1793,8 +2259,12 @@
         dpTotal: main.dpTotal,
         dpTotalBar: main.dpTotalBar,
         d_mm: main.d_mm,
+        d: main.d,
+        segment,
+        cipMin,
+        cipMax,
         cipStatus: cipStatus(main.velocity, cipMin, cipMax),
-        cipTone: rangeTone(main.velocity, cipMin, cipMax),
+        cipTone: velocityTone(main.velocity),
         kTone: rangeTone(kElbow, 0.1, 2.0),
         epsTone: rangeTone(roughness_mm, 0.0005, 0.1),
         leqTone: rangeTone(leqElbowLD, 5, 120),
@@ -2070,6 +2540,10 @@
           cip: cipStatus(pr.velocity, cipMin, cipMax)
         }))
       };
+      renderCipCalc();
+      if ((currentPumpMode === "process" && isPumpLinked("process")) || (currentPumpMode === "cip" && isPumpLinked("cip"))) {
+        renderPumpCalc();
+      }
     }
 
     function metric(k, v, cls = "", tone = "") {
@@ -2087,53 +2561,65 @@
     function renderMetrics(r) {
       const primary = document.getElementById("primaryMetrics");
       const secondary = document.getElementById("secondaryMetrics");
+      const details = document.getElementById("detailMetrics");
+      const cipCheckPanel = document.getElementById("cipCheckPanel");
       const workPump = pumpEstimate(r.q, r.dpTotal, r.rho);
+      const cipCheck = buildCipCheck(r.d, r.cipMin);
 
       primary.innerHTML = [
-        metric("Дебит на продукта [L/h]", fmt(r.q_l_h, 0)),
-        metric("Обем на серпентината [L]", fmt(r.volume_l, 2)),
         metric("Обем на тръбата [L/m]", fmt(r.volumePerMeter_l_m, 3)),
-        metric("Обща дължина на тръбната задръжка [m]", fmt(r.length, 2)),
-        metric("Реален брой колена 90°", r.elbows90.toString())
+        metric("Дебит [L/s]", fmt(r.q_l_s, 3)),
+        metric("Общ обем на серпентината [L]", fmt(r.volume_l, 2)),
+        metric("Обща дължина на тръбната задръжка [m]", fmt(r.length, 2))
       ].join("");
 
       secondary.innerHTML = [
-        metric("Дебит на продукта [L/s]", fmt(r.q_l_s, 3), "small"),
-        metric("Скорост при работа [m/s]", fmt(r.velocity, 3), "small"),
+        metric("Брой колена 90°", r.elbows90.toString(), "small"),
+        metric("Дължина прав участък [m]", fmt(r.segment, 3), "small"),
+        metric("Дължина на сектор [m]", fmt(r.sectorLength, 3), "small"),
+        metric("Дължина вход-изход [m]", fmt(r.inletOutletLengthM, 3), "small"),
+        metric("Скорост на потока [m/s]", fmt(r.velocity, 3), "small", velocityTone(r.velocity)),
+        metric("Съпротивление Δp [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
+        metric("CIP статус", cipCheck.verdict, "small", cipCheck.verdictTone)
+      ].join("");
+
+      cipCheckPanel.innerHTML = [
+        metric("Re_CIP [-]", fmt(cipCheck.re, 0), "small", cipCheck.regimeTone),
+        metric("Режим на потока", cipCheck.regime, "small", cipCheck.regimeTone),
+        metric("CIP статус", cipCheck.verdict, "small", cipCheck.verdictTone),
+        metric("Минимален дебит за CIP [L/h]", fmt(cipCheck.qMinLh, 0), "small", velocityTone(r.cipMin)),
+        `<div class="cip-check-note">Фиксирани референтни свойства за CIP при 65°C: ρ = ${fmt(cipCheck.rho, 0)} kg/m³, μ = ${fmt(cipCheck.mu, 6)} Pa·s. Проверка с вътрешен диаметър ID ${fmt(r.d_mm, 1)} mm и v_CIP_min ${fmt(r.cipMin, 3)} m/s.</div>`
+      ].join("");
+
+      details.innerHTML = [
+        metric("Дебит на продукта [L/h]", fmt(r.q_l_h, 0), "small"),
         metric("Задръжка t/V [s/L]", fmt(r.retention_s_l, 3), "small"),
         metric("Светъл отвор ID [mm]", fmt(r.d_mm, 1), "small"),
         metric("Метод", r.method === "leq" ? "Leq" : "ζ", "small"),
         metric("Работна помпа дебит [m³/h]", fmt(r.q_l_h / 1000, 3), "small"),
         metric("Работна помпа напор [m]", fmt(workPump.head, 2), "small"),
         metric("Работна помпа мощност [kW]", fmt(workPump.shaftPower / 1000, 3), "small"),
-        metric("Работна помпа Δp [bar]", fmt(r.dpTotalBar, 4), "small"),
+        metric("Работна помпа Δp [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
         metric("Работна помпа резерв", `${fmt(workPump.reserve * 100, 0)} %`, "small"),
         metric("Работна помпа КПД", `${fmt(workPump.efficiency * 100, 0)} %`, "small"),
-        metric("Дължина на 1 сектор [m]", fmt(r.sectorLength, 3), "small"),
         metric("Дължина на 1 коляно [m]", fmt(r.elbowArcLength, 3), "small"),
         metric("Радиус на коляно", `${fmt(r.bendRadiusM * 1000, 1)} mm / R/D=${fmt(r.elbowRadiusD, 2)}${r.elbowRadiusIsTabular ? " табл." : ""}`, "small"),
-        metric("Вход/изход [m]", fmt(r.inletOutletLengthM, 3), "small"),
-        metric("Удължение вход/изход [mm]", fmt(r.inletOutletExtensionM * 1000, 0), "small"),
+        metric("Удължение вход/изход [m]", fmt(r.inletOutletExtensionM, 3), "small"),
         metric("Общо дължина в колена [m]", fmt(r.totalElbowArcLength, 3), "small"),
         metric("Права дължина общо [m]", fmt(r.straightLengthTotal, 3), "small"),
         metric("Габарит ширина [mm]", fmt(r.overallWidthM * 1000, 0), "small"),
         metric("Габарит височина [mm]", fmt(r.overallHeightM * 1000, 0), "small"),
         metric("Дълбочина U [mm]", fmt(r.sideDepthM * 1000, 0), "small"),
-        metric("Брой колена 90°", r.elbows90.toString(), "small"),
         metric("Общо съпротивление ΣK [-]", fmt(r.kTotal, 2), "small", r.kTone),
-        metric("Скорост v [m/s]", fmt(r.velocity, 3), "small"),
         metric("Re [-]", fmt(r.re, 0), "small"),
-        metric("f [-]", fmt(r.f, 4), "small"),
+        metric("λ / f [-]", fmt(r.f, 4), "small"),
         metric("Δp линейни [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
         metric("Δp колена [kPa]", fmt(r.dpElbows / 1000, 2), "small"),
-        metric("Δp вход/изход [kPa]", fmt(r.dpIO / 1000, 2), "small"),
-        metric("Δp доп. фитинги [kPa]", fmt(r.dpExtras / 1000, 2), "small"),
         metric("Δp локални [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
         metric("Δp общ [kPa]", fmt(r.dpTotal / 1000, 2), "small"),
-        metric("Δp общ [bar]", fmt(r.dpTotalBar, 4), "small"),
+        metric("Δp общ [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
         metric("ε диапазон", r.epsTone === "ok" ? "В диапазон" : r.epsTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.epsTone),
-        metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone),
-        metric("ΣK доп. фитинги", fmt(r.kExtras, 2), "small", r.extrasTone)
+        metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone)
       ].join("");
     }
 
@@ -2143,11 +2629,9 @@
 
     function renderFormulas(x) {
       const f = document.getElementById("formulas");
-      const ioPart = x.includeIO ? " + 1.5" : "";
-      const extrasText = `Kдоп = K11852 + K11851 + K32676 = ${fmt(x.k11852Total, 3)} + ${fmt(x.k11851Total, 3)} + ${fmt(x.k32676Total, 3)} = ${fmt(x.kExtras, 3)}`;
       const lossBlock = x.lossMethod === "leq"
-        ? `12) Метод Leq (еквивалентна дължина):\nLeq(колена) = nколена·(L/D)коляно·D = ${x.elbows90}·${fmt(x.leqElbowLD, 1)}·${fmt(x.d, 4)} = ${fmt(x.leqElbows, 3)} m\nLeq(вход/изход) = (Kвх/изх / f)·D = (${fmt(x.kIO, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqIO, 3)} m\nLeq(доп) = (Kдоп / f)·D = (${fmt(x.kExtras, 3)} / ${fmt(x.f, 5)})·${fmt(x.d, 4)} = ${fmt(x.leqExtras, 3)} m\nLхидр = L + Leq(колена) + Leq(вх/изх) + Leq(доп) = ${fmt(x.length, 3)} + ${fmt(x.leqElbows, 3)} + ${fmt(x.leqIO, 3)} + ${fmt(x.leqExtras, 3)} = ${fmt(x.lHydraulicTotal, 3)} m\n${extrasText}\nΔp = f·(Lхидр/D)·ρv²/2 = ${fmt(x.dpTotal, 2)} Pa`
-        : `12) Метод ζ (локални коефициенти):\nΣK = nколена·Kколяно${x.includeIO ? " + Kвх/изх" : ""} + Kдоп\n${extrasText}\nΣK = ${x.elbows90}·${fmt(x.kElbow, 2)}${ioPart} + ${fmt(x.kExtras, 3)} = ${fmt(x.kTotal, 3)}\nΔpлок = ΣK·ρv²/2 = ${fmt(x.kTotal, 3)}·${fmt(x.dyn, 3)} = ${fmt(x.dpLocal, 2)} Pa`;
+        ? `12) Метод Leq (еквивалентна дължина):\nLeq(колена) = nколена·(L/D)коляно·D = ${x.elbows90}·${fmt(x.leqElbowLD, 1)}·${fmt(x.d, 4)} = ${fmt(x.leqElbows, 3)} m\nLхидр = L + Leq(колена) = ${fmt(x.length, 3)} + ${fmt(x.leqElbows, 3)} = ${fmt(x.lHydraulicTotal, 3)} m\nΔp = f·(Lхидр/D)·ρv²/2 = ${fmt(x.dpTotal, 2)} Pa`
+        : `12) Метод ζ (локални коефициенти):\nΣK = nколена·Kколяно\nΣK = ${x.elbows90}·${fmt(x.kElbow, 2)} = ${fmt(x.kTotal, 3)}\nΔpлок = ΣK·ρv²/2 = ${fmt(x.kTotal, 3)}·${fmt(x.dyn, 3)} = ${fmt(x.dpLocal, 2)} Pa`;
 
       const lines = [
         formulaLine(`1) Преобразуване на дебит:\nQ = ${fmt(x.q_l_h, 1)} L/h = ${fmt(x.q_l_s, 4)} L/s = ${fmt(x.q_l_h / 1000, 4)} m³/h = ${fmt(x.q, 6)} m³/s`),
@@ -2164,7 +2648,7 @@
         formulaLine(`${lossBlock}\nВъведен диапазон за K(90°): min 0.10 / max 2.00; (L/D)коляно: min 5 / max 120`),
         formulaLine(`13) Динамично налягане:\nρv²/2 = ${fmt(x.rho, 1)}·(${fmt(x.velocity, 4)})²/2 = ${fmt(x.dyn, 3)} Pa`),
         formulaLine(`14) Пад по дължина:\nΔpₗ = f·(L/D)·ρv²/2 = ${fmt(x.f, 5)}·(${fmt(x.length, 3)}/${fmt(x.d, 4)})·${fmt(x.dyn, 3)} = ${fmt(x.dpLinear, 2)} Pa`),
-        formulaLine(`15) Локален пад (детайл):\nΔpколена = ${fmt(x.dpElbows, 2)} Pa; Δpвх/изх = ${fmt(x.dpIO, 2)} Pa; Δpдоп = ${fmt(x.dpExtras, 2)} Pa; Δpлок = ${fmt(x.dpLocal, 2)} Pa`),
+        formulaLine(`15) Локален пад (детайл):\nΔpколена = ${fmt(x.dpElbows, 2)} Pa; Δpлок = ${fmt(x.dpLocal, 2)} Pa`),
         formulaLine(`16) Общ пад на налягане:\nΔp = Δpₗ + Δpₗₒc = ${fmt(x.dpLinear, 2)} + ${fmt(x.dpLocal, 2)} = ${fmt(x.dpTotal, 2)} Pa (${fmt(x.dpTotal / 1000, 2)} kPa)`),
         formulaLine(`17) Преобразуване за избор на помпа:\nΔp [bar] = Δp [Pa] / 100000 = ${fmt(x.dpTotal, 2)} / 100000 = ${fmt(x.dpTotalBar, 4)} bar`)
       ];
@@ -2194,85 +2678,425 @@
     }
 
     function renderCipCalc() {
-      const flow = num("cipFlow", 0);
-      const d = num("cipDiameter", 1);
+      if (isCipLinked()) syncCipLinkedInputs();
+
+      const dMm = num("cipDiameter", 1);
       const length = num("cipRouteLength", 0);
-      const totalK = num("cipTotalK", 0);
-      const rho = num("cipRho", 998);
-      const mu = num("cipMu", 1);
-      const eps = num("cipRoughness", 0.0015);
+      const volumeL = num("cipVolume", 0);
       const minV = num("cipMin", 1.5);
-      const r = genericHydraulic(flow, d, length, totalK, rho, mu, eps);
-      const tone = r.velocity >= minV ? "ok" : "out";
-      const neededFlowLh = (minV * r.area * 3600 * 1000);
-      const missingFlow = Math.max(0, neededFlowLh - flow);
+      const maxV = num("cipMax", V_GREEN_MAX);
+      const temp = num("cipTemp", 65);
+      const cycles = Math.max(1, Math.round(num("cipCycles", 1)));
+      const props = cipFluidProperties(temp);
+      const d = dMm / 1000;
+      const area = Math.PI * Math.pow(d, 2) / 4;
+      const eps = ((lastHoldUpCipData?.roughness_mm ?? num("roughness", 0.0015)) || 0.0015) / 1000;
+      const totalK = lastHoldUpCipData?.kTotal || 0;
+      const re = (props.rho * minV * d) / props.mu;
+      const lambda = colebrookWhite(re, eps, d);
+      const dyn = props.rho * Math.pow(minV, 2) / 2;
+      const dpFriction = lambda * (length / d) * dyn;
+      const dpLocal = totalK * dyn;
+      const dpTotal = dpFriction + dpLocal;
+      const qMinLh = minV * area * 3600 * 1000;
+      const qMinLs = qMinLh / 3600;
+      const flushTime = qMinLs > 0 ? volumeL / qMinLs : 0;
+      const totalFlushTime = flushTime * cycles;
+      const verdict = cipVerdict(minV, re);
+      lastCipPumpData = {
+        q_l_h: qMinLh,
+        d_mm: dMm,
+        length_m: length,
+        volume_l: volumeL,
+        dp_bar: dpTotal / 100000,
+        kTotal: totalK,
+        rho: props.rho,
+        mu: props.mu,
+        roughness_mm: eps * 1000,
+        re,
+        minVelocity: minV,
+        verdict: verdict.label
+      };
+      applyRangeClass(document.getElementById("cipMin"), velocityTone(minV));
+      applyRangeClass(document.getElementById("cipMax"), velocityTone(maxV));
 
       document.getElementById("cipMetrics").innerHTML = [
-        metric("Скорост CIP [m/s]", fmt(r.velocity, 3), "", tone),
-        metric("Минимален дебит за целта [L/h]", fmt(neededFlowLh, 0), "small"),
-        metric("Re [-]", fmt(r.re, 0), "small"),
-        metric("f [-]", fmt(r.f, 4), "small"),
-        metric("Пад по дължина [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
-        metric("Локални загуби [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
-        metric("Общо Δp [bar]", fmt(r.dpBar, 4), "small")
+        metric("CIP статус", verdict.label, "", verdict.tone),
+        metric("CIP min [m/s]", fmt(minV, 3), "small", velocityTone(minV)),
+        metric("CIP max [m/s]", fmt(maxV, 3), "small", velocityTone(maxV)),
+        metric("Минимален дебит за CIP [L/h]", fmt(qMinLh, 0), "small", velocityTone(minV)),
+        metric("Re_CIP [-]", fmt(re, 0), "small", cipRegimeTone(re)),
+        metric("Режим", cipRegimeText(re), "small", cipRegimeTone(re)),
+        metric("λ Colebrook [-]", fmt(lambda, 5), "small"),
+        metric("Δp триене [bar]", fmt(dpFriction / 100000, 4), "small", pressureTone(dpFriction / 100000)),
+        metric("Δp локални [bar]", fmt(dpLocal / 100000, 4), "small", pressureTone(dpLocal / 100000)),
+        metric("Δp общо [bar]", fmt(dpTotal / 100000, 4), "small", pressureTone(dpTotal / 100000)),
+        metric("t за 1 обем [s]", fmt(flushTime, 1), "small"),
+        metric("t общо цикли [s]", fmt(totalFlushTime, 1), "small"),
+        metric("ρ / μ", `${fmt(props.rho, 1)} kg/m³ / ${fmt(props.mu, 6)} Pa·s`, "small")
       ].join("");
 
-      document.getElementById("cipNote").textContent = r.velocity >= minV
-        ? "CIP скоростта покрива зададения минимум. Провери отделно време, температура, химия и изискванията на конкретната инсталация."
-        : `CIP скоростта е под минимума. Ориентировъчно са нужни още ${fmt(missingFlow, 0)} L/h или по-малък вътрешен диаметър.`;
+      document.getElementById("cipNote").textContent =
+        `CIP режим: ${isCipLinked() ? "свързан със задръжката" : "самостоятелен"}. Свойствата са линейно интерполирани между 65°C и 80°C. Локалните загуби ползват Σζ=${fmt(totalK, 2)} от текущата конфигурация на задръжката.`;
+      if (currentPumpMode === "cip" && isPumpLinked("cip")) renderPumpCalc();
+    }
+
+    const PUMP_CONTROL_IDS = [
+      "pumpFlow", "pumpDiameter", "pumpLength", "pumpSourceDp", "pumpRho", "pumpMu",
+      "pumpRoughness", "pumpTotalK", "pumpStaticHead", "pumpExtraHead",
+      "pumpBackPressure", "pumpEfficiency"
+    ];
+
+    function pumpStateKey(mode) {
+      return `${PUMP_STATE_KEY_PREFIX}:${mode}`;
+    }
+
+    function pumpLinkKey(mode) {
+      return `${PUMP_LINK_KEY_PREFIX}:${mode}`;
+    }
+
+    function pumpLinkMode(mode = currentPumpMode) {
+      if (mode === "test") return "standalone";
+      const stored = localStorage.getItem(pumpLinkKey(mode));
+      if (stored === "route") return "linked";
+      return stored || "linked";
+    }
+
+    function isPumpLinked(mode = currentPumpMode) {
+      if (mode === "test") return false;
+      return pumpLinkMode(mode) !== "standalone";
+    }
+
+    function savePumpModeState(mode = currentPumpMode) {
+      const state = {};
+      PUMP_CONTROL_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) state[id] = el.value;
+      });
+      localStorage.setItem(pumpStateKey(mode), JSON.stringify(state));
+    }
+
+    function loadPumpModeState(mode = currentPumpMode) {
+      const raw = localStorage.getItem(pumpStateKey(mode));
+      if (!raw) return;
+      try {
+        const state = JSON.parse(raw);
+        PUMP_CONTROL_IDS.forEach(id => setControlValue(id, state[id]));
+      } catch (_err) {
+      }
+    }
+
+    function currentPumpLinkedSource() {
+      if (currentPumpMode === "process") {
+        const source = lastHoldUpCipData;
+        return source ? {
+          flowLh: source.q_l_h,
+          dMm: source.d_mm,
+          lengthM: source.length_m,
+          dpBar: source.dp_bar,
+          rho: source.rho,
+          mu: source.mu,
+          roughnessMm: source.roughness_mm,
+          totalK: source.kTotal
+        } : null;
+      }
+      if (currentPumpMode === "cip") {
+        return lastCipPumpData ? {
+          flowLh: lastCipPumpData.q_l_h,
+          dMm: lastCipPumpData.d_mm,
+          lengthM: lastCipPumpData.length_m,
+          dpBar: lastCipPumpData.dp_bar,
+          rho: lastCipPumpData.rho,
+          mu: lastCipPumpData.mu,
+          roughnessMm: lastCipPumpData.roughness_mm,
+          totalK: lastCipPumpData.kTotal
+        } : null;
+      }
+      if (currentPumpMode === "routeProcess" || currentPumpMode === "routeCip") {
+        const routeMode = currentPumpMode === "routeCip" ? "cip" : "process";
+        const source = lastRoutePumpDataByMode[routeMode];
+        return source ? {
+          flowLh: source.q_l_h,
+          dMm: source.d_mm,
+          lengthM: source.length_m,
+          dpBar: source.dp_bar,
+          rho: source.rho,
+          mu: source.mu,
+          roughnessMm: source.roughness_mm,
+          totalK: source.kTotal
+        } : null;
+      }
+      return null;
+    }
+
+    function currentPumpLinkedSourceLabel() {
+      if (!isPumpLinked() || currentPumpMode === "test") return "";
+      if (currentPumpMode === "cip") return "CIP секция";
+      if (currentPumpMode === "routeProcess") return "тръбно трасе - работен режим";
+      if (currentPumpMode === "routeCip") return "тръбно трасе - CIP режим";
+      return "тръбна задръжка";
+    }
+
+    function syncPumpLinkedInputs() {
+      const linked = isPumpLinked();
+      const source = linked ? currentPumpLinkedSource() : null;
+      const sourceIds = ["pumpFlow", "pumpDiameter", "pumpLength", "pumpSourceDp", "pumpRho", "pumpMu", "pumpRoughness", "pumpTotalK"];
+      sourceIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.readOnly = Boolean(source);
+      });
+
+      if (!source) return;
+      setControlValue("pumpFlow", source.flowLh);
+      setControlValue("pumpDiameter", source.dMm);
+      setControlValue("pumpLength", source.lengthM);
+      setControlValue("pumpSourceDp", source.dpBar);
+      setControlValue("pumpRho", source.rho);
+      setControlValue("pumpMu", source.mu);
+      setControlValue("pumpRoughness", source.roughnessMm);
+      setControlValue("pumpTotalK", source.totalK);
+    }
+
+    function setPumpLinkMode(linkMode) {
+      const normalized = currentPumpMode === "test" ? "standalone" : linkMode;
+      if (currentPumpMode !== "test") localStorage.setItem(pumpLinkKey(currentPumpMode), normalized);
+      document.getElementById("pumpLinkedBtn")?.classList.toggle("active", normalized === "linked");
+      document.getElementById("pumpStandaloneBtn")?.classList.toggle("active", normalized === "standalone");
+      syncPumpLinkedInputs();
+      renderPumpCalc();
+    }
+
+    function setPumpLinkedMode(isLinked) {
+      setPumpLinkMode(isLinked ? "linked" : "standalone");
+    }
+
+    function setPumpMode(mode) {
+      savePumpModeState(currentPumpMode);
+      currentPumpMode = mode;
+      localStorage.setItem(PUMP_MODE_KEY, mode);
+      document.querySelectorAll("[data-pump-mode]").forEach(btn => btn.classList.toggle("active", btn.dataset.pumpMode === mode));
+      document.getElementById("pumpLinkToggle").style.display = mode === "test" ? "none" : "grid";
+      if ((mode === "routeProcess" || mode === "routeCip") && document.querySelector(".route-segment")) {
+        setRouteMode(mode === "routeCip" ? "cip" : "process", { markUserResult: false });
+      }
+      loadPumpModeState(mode);
+      const linkMode = pumpLinkMode(mode);
+      document.getElementById("pumpModeNotice").textContent = mode === "test"
+        ? "Тестов режим — независимо изчисление, не е свързано с горните модули"
+        : mode === "cip"
+          ? "CIP режим: при свързване се ползват Q_CIP_min, D, L и Δp_CIP от CIP секцията. Дебитът на помпата включва 15% запас."
+          : mode === "routeProcess"
+            ? "Тръбно трасе - работен режим: ползват се дебитът, DN сегментите и загубите от раздел Тръбно трасе."
+            : mode === "routeCip"
+              ? "Тръбно трасе - CIP режим: ползват се CIP дебитът, DN сегментите и загубите от раздел Тръбно трасе."
+              : "Работен режим на задръжката: ползват се Q, D, L и Δp от тръбната задръжка.";
+      setPumpLinkMode(linkMode);
+    }
+
+    function renderPumpBreakdown(parts) {
+      const el = document.getElementById("pumpBreakdown");
+      if (!el) return;
+      const items = [
+        ["friction", "H_friction", parts.hFriction],
+        ["static", "H_static", parts.staticHead],
+        ["local", "H_local", parts.hLocal],
+        ["extra", "H_extra", parts.hExtra],
+        ["safety", "H_safety", parts.hSafety]
+      ];
+      const denom = items.reduce((sum, [, , value]) => sum + Math.abs(value), 0) || 1;
+      const segments = items.map(([cls, label, value]) => {
+        const width = Math.max(8, Math.abs(value) / denom * 100);
+        const assist = cls === "static" && value < 0 ? " assist" : "";
+        return `<div class="stacked-segment ${cls}${assist}" style="width:${width}%">${label}</div>`;
+      }).join("");
+      const legend = items.map(([, label, value]) => {
+        const cls = label === "H_static" && value < 0 ? " class=\"static-assist\"" : "";
+        return `<div${cls}>${label}: ${fmt(value, 2)} m</div>`;
+      }).join("");
+      el.innerHTML = `
+        <div class="section-title">Разбивка на загубите</div>
+        <div class="stacked-bar">${segments}</div>
+        <div class="stacked-legend">${legend}<div>H_extra включва арматури ${fmt(parts.userExtraHead, 2)} m + противоналягане ${fmt(parts.hBackPressure, 2)} m</div></div>
+      `;
+    }
+
+    function bindPumpControls() {
+      document.querySelectorAll("[data-pump-mode]").forEach(btn => {
+        btn.addEventListener("click", () => setPumpMode(btn.dataset.pumpMode));
+      });
+      document.getElementById("pumpLinkedBtn")?.addEventListener("click", () => setPumpLinkedMode(true));
+      document.getElementById("pumpStandaloneBtn")?.addEventListener("click", () => setPumpLinkedMode(false));
+      PUMP_CONTROL_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", () => {
+          savePumpModeState(currentPumpMode);
+          renderPumpCalc();
+        });
+      });
+      setPumpMode(localStorage.getItem(PUMP_MODE_KEY) || "process");
     }
 
     function renderPumpCalc() {
-      const flowLh = num("pumpFlow", 0);
-      const dpBar = num("pumpDp", 0);
-      const staticHead = num("pumpStaticHead", 0);
-      const reserve = num("pumpReserve", 0) / 100;
-      const efficiency = Math.max(num("pumpEfficiency", 55) / 100, 0.01);
+      syncPumpLinkedInputs();
+      savePumpModeState(currentPumpMode);
+
+      const mode = currentPumpMode;
+      const flowLhBase = num("pumpFlow", 0);
+      const isCipPumpMode = mode === "cip" || mode === "routeCip";
+      const flowLh = isCipPumpMode ? flowLhBase * 1.15 : flowLhBase;
+      const qM3h = flowLh / 1000;
+      const qM3s = qM3h / 3600;
+      const dMm = num("pumpDiameter", 1);
+      const d = dMm / 1000;
+      const length = num("pumpLength", 0);
       const rho = num("pumpRho", 1000);
-      const q = flowLh / 1000 / 3600;
-      const frictionHead = (dpBar * 100000) / (rho * 9.80665);
-      const totalHead = (frictionHead + staticHead) * (1 + reserve);
-      const hydraulicPower = rho * 9.80665 * q * totalHead;
-      const shaftPower = hydraulicPower / efficiency;
+      const mu = num("pumpMu", 0.001);
+      const eps = num("pumpRoughness", 0.0015) / 1000;
+      const totalK = num("pumpTotalK", 0);
+      const staticHead = num("pumpStaticHead", 0);
+      const userExtraHead = num("pumpExtraHead", 0);
+      const backPressureBar = num("pumpBackPressure", 0);
+      const efficiency = Math.min(0.8, Math.max(0.4, num("pumpEfficiency", 0.65)));
+      const area = Math.PI * Math.pow(d, 2) / 4;
+      const velocity = area > 0 ? qM3s / area : 0;
+      const re = mu > 0 ? (rho * velocity * d) / mu : 0;
+      const lambda = colebrookWhite(re, eps, d);
+      const velocityHead = Math.pow(velocity, 2) / (2 * 9.80665);
+      const hFriction = d > 0 ? lambda * (length / d) * velocityHead : 0;
+      const hLocal = totalK * velocityHead;
+      const hBackPressure = rho > 0 ? (backPressureBar * 100000) / (rho * 9.80665) : 0;
+      const hExtra = userExtraHead + hBackPressure;
+      const hBeforeSafety = hFriction + staticHead + hLocal + hExtra;
+      const hSafety = hBeforeSafety * 0.10;
+      const hTotal = hBeforeSafety + hSafety;
+      const dpPumpBar = (rho * 9.80665 * hTotal) / 100000;
+      const pHyd = (rho * 9.80665 * qM3s * hTotal) / 1000;
+      const pShaft = efficiency > 0 ? pHyd / efficiency : 0;
+      const powerTone = pShaft > 15 ? "out" : pShaft > 5 ? "warn" : "";
 
       document.getElementById("pumpMetrics").innerHTML = [
-        metric("Препоръчителен дебит [m³/h]", fmt(flowLh / 1000, 3)),
-        metric("Работен напор H [m]", fmt(totalHead, 2)),
-        metric("Хидравлична мощност [kW]", fmt(hydraulicPower / 1000, 3), "small"),
-        metric("Ориент. мощност на вала [kW]", fmt(shaftPower / 1000, 3), "small"),
-        metric("Резерв", `${fmt(reserve * 100, 0)} %`, "small")
+        metric("Необходим дебит Q [m³/h]", fmt(qM3h, 3)),
+        metric("Необходим дебит Q [L/s]", fmt(flowLh / 3600, 3)),
+        metric("Необходим напор H [m]", fmt(hTotal, 2)),
+        metric("Необходимо налягане Δp_pump [bar]", fmt(dpPumpBar, 3), "", pressureTone(dpPumpBar)),
+        metric("Хидравлична мощност P_hyd [kW]", fmt(pHyd, 3), "small"),
+        metric("Валова мощност P_shaft [kW]", fmt(pShaft, 3), "small", powerTone)
       ].join("");
 
-      document.getElementById("pumpNote").textContent =
-        `Търси помпа с работна точка около ${fmt(flowLh / 1000, 2)} m³/h при ${fmt(totalHead, 2)} m. За окончателен избор трябва крива на производителя, NPSH и тип продукт.`;
+      renderPumpBreakdown({ hFriction, staticHead, hLocal, hExtra, hSafety, userExtraHead, hBackPressure });
+
+      const qCipMinTurbulent = isCipPumpMode ? 1.5 * area * 3600 * 1000 : 0;
+      const cipWarning = isCipPumpMode && flowLhBase < qCipMinTurbulent
+        ? ` Внимание: Q_CIP е под минималния турбулентен дебит ${fmt(qCipMinTurbulent, 0)} L/h.`
+        : "";
+      const sourceLabel = currentPumpLinkedSourceLabel();
+      const sourceNote = sourceLabel ? `Свързан източник: ${sourceLabel}. ` : "";
+      document.getElementById("pumpNote").innerHTML =
+        `${mode === "test" ? "Тестов режим — независимо изчисление, не е свързано с горните модули. " : ""}` +
+        sourceNote +
+        `λ=${fmt(lambda, 5)}, Re=${fmt(re, 0)}, v=${fmt(velocity, 3)} m/s, η=${fmt(efficiency, 2)}. ` +
+        `H_static ${staticHead < 0 ? "подпомага помпата" : "натоварва помпата"}.${cipWarning}`;
     }
 
-    function renderRouteCalc() {
+    function renderRouteCalc({ markUserResult = true } = {}) {
+      if (markUserResult) routeHasUserResult = true;
       const flow = num("routeFlow", 0);
-      const d = num("routeDiameter", 1);
-      const length = num("routeLength", 0);
-      const elbows = num("routeElbows", 0);
-      const valves = num("routeValves", 0);
-      const tees = num("routeTees", 0);
-      const otherK = num("routeOtherK", 0);
       const rho = num("routeRho", 998);
       const mu = num("routeMu", 1);
       const eps = num("routeRoughness", 0.0015);
-      const totalK = elbows * 0.9 + valves * 2.5 + tees * 1.5 + otherK;
-      const r = genericHydraulic(flow, d, length, totalK, rho, mu, eps);
+      const muPaS = mu / 1000;
+      const q = flow / 1000 / 3600;
+      const pipes = seriesAPipes();
+      const segments = getRouteSegmentsState();
+      let totalDpPa = 0;
+      let totalLength = 0;
+      let totalK = 0;
+      const rows = segments.map((segment, index) => {
+        const pipe = pipes[segment.dnIndex] || pipes[0];
+        const dMm = pipe.od - 2 * pipe.t;
+        const d = dMm / 1000;
+        const area = Math.PI * Math.pow(d, 2) / 4;
+        const velocity = area > 0 ? q / area : 0;
+        const re = muPaS > 0 ? (rho * velocity * d) / muPaS : 0;
+        const lambda = colebrookWhite(re, eps / 1000, d);
+        let zeta = (segment.elbows90 * 0.60) + (segment.elbows45 * 0.35) + (segment.teeThrough * 0.30) + (segment.teeBranch * 0.70);
+        routeComponentLibrary.forEach(component => {
+          const item = segment.components?.[component.key];
+          zeta += (item?.count || 0) * (item?.zeta ?? component.zeta);
+        });
+        const nextSegment = segments[index + 1];
+        if (nextSegment) {
+          const nextPipe = pipes[nextSegment.dnIndex] || pipe;
+          const d2 = (nextPipe.od - 2 * nextPipe.t) / 1000;
+          const area1 = Math.PI * Math.pow(d, 2) / 4;
+          const area2 = Math.PI * Math.pow(d2, 2) / 4;
+          if (area2 > area1) {
+            const override = parseFloat(segment.expansionZeta);
+            zeta += Number.isFinite(override) ? override : Math.pow(1 - (area1 / area2), 2);
+          } else if (area2 < area1) {
+            const override = parseFloat(segment.contractionZeta);
+            zeta += Number.isFinite(override) ? override : 0.5 * (1 - (area2 / area1));
+          }
+        }
+        const dyn = rho * Math.pow(velocity, 2) / 2;
+        const dpPa = ((lambda * (segment.length / d)) + zeta) * dyn;
+        totalDpPa += dpPa;
+        totalLength += segment.length;
+        totalK += zeta;
+        return { index, pipe, length: segment.length, dMm, velocity, re, zeta, dpPa, lambda };
+      });
+      const totalDpBar = totalDpPa / 100000;
+      const representative = rows[0];
+      const routePumpData = {
+        q_l_h: flow,
+        d_mm: representative?.dMm || 0,
+        length_m: totalLength,
+        dp_bar: totalDpBar,
+        rho,
+        mu: muPaS,
+        roughness_mm: eps,
+        kTotal: totalK
+      };
+      lastRoutePumpData = routePumpData;
+      lastRoutePumpDataByMode[currentRouteMode] = routePumpData;
 
       document.getElementById("routeMetrics").innerHTML = [
-        metric("Скорост [m/s]", fmt(r.velocity, 3), "", rangeTone(r.velocity, 0.5, 2.5)),
-        metric("Общо ΣK [-]", fmt(totalK, 2), "small"),
-        metric("Re [-]", fmt(r.re, 0), "small"),
-        metric("f [-]", fmt(r.f, 4), "small"),
-        metric("Пад по дължина [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
-        metric("Пад в елементи [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
-        metric("Общо Δp [bar]", fmt(r.dpBar, 4), "small")
+        metric("Режим", currentRouteMode === "cip" ? "CIP" : "Работа", "small"),
+        metric("Общ пад Δp [bar]", fmt(totalDpBar, 4), "", pressureTone(totalDpBar)),
+        metric("Обща дължина [m]", fmt(totalLength, 2), "small"),
+        metric("Общо Σζ [-]", fmt(totalK, 2), "small"),
+        metric("Брой сегменти", rows.length.toString(), "small")
       ].join("");
+      document.getElementById("routeResultsTable").innerHTML = rows.map(row => {
+        const tone = velocityTone(row.velocity);
+        const cls = tone === "warn" ? " class=\"result-row-warn\"" : tone === "out" ? " class=\"result-row-out\"" : "";
+        return `<tr${cls}>
+          <td>${row.index + 1}</td>
+          <td>${row.pipe.dn}</td>
+          <td>${fmt(row.length, 2)}</td>
+          <td>${fmt(row.velocity, 3)}</td>
+          <td>${fmt(row.re, 0)}</td>
+          <td>${fmt(row.zeta, 2)}</td>
+          <td>${fmt(row.dpPa / 100000, 4)}</td>
+        </tr>`;
+      }).join("") + `
+        <tr>
+          <th colspan="2">Общо</th>
+          <th>${fmt(totalLength, 2)}</th>
+          <th>-</th>
+          <th>-</th>
+          <th>${fmt(totalK, 2)}</th>
+          <th>${fmt(totalDpBar, 4)}</th>
+        </tr>`;
 
       document.getElementById("routeNote").textContent =
-        "Приети ориентировъчни K: коляно 90° = 0.9, вентил = 2.5, тройник = 1.5. За реален проект ги замени с каталожни стойности според конкретните елементи.";
+        `Трасето използва DN от EN 10357 Series A, λ по Colebrook-White и локални ζ по библиотеката. Текущият режим е ${currentRouteMode === "cip" ? "CIP" : "работен"} и се подава към съответния режим за помпа като отделна сметка.`;
+      saveRouteState();
+      if (markUserResult && (
+        (currentPumpMode === "routeProcess" && currentRouteMode === "process" && isPumpLinked("routeProcess")) ||
+        (currentPumpMode === "routeCip" && currentRouteMode === "cip" && isPumpLinked("routeCip"))
+      )) renderPumpCalc();
     }
 
     function setupPages() {
@@ -2283,21 +3107,42 @@
           document.querySelectorAll(".page").forEach(section => section.classList.toggle("active", section.id === `page-${page}`));
           if (page === "cip") renderCipCalc();
           if (page === "pumps") renderPumpCalc();
-          if (page === "routes") renderRouteCalc();
+          if (page === "routes") renderRouteCalc({ markUserResult: false });
           if (page === "protocols") updateProtocolPreview();
         });
       });
 
       document.getElementById("cipCalcBtn").addEventListener("click", renderCipCalc);
       document.getElementById("pumpCalcBtn").addEventListener("click", renderPumpCalc);
-      document.getElementById("routeCalcBtn").addEventListener("click", renderRouteCalc);
+      document.getElementById("routeCalcBtn").addEventListener("click", () => renderRouteCalc({ markUserResult: true }));
+      document.querySelectorAll("[data-route-mode]").forEach(btn => {
+        btn.addEventListener("click", () => setRouteMode(btn.dataset.routeMode, { markUserResult: false }));
+      });
+      document.getElementById("addRouteSegmentBtn").addEventListener("click", () => {
+        const segments = getRouteSegmentsState();
+        if (segments.length >= 10) return;
+        segments.push(routeDefaultSegment());
+        renderRouteSegments(segments);
+        renderRouteCalc({ markUserResult: true });
+      });
+      document.getElementById("removeRouteSegmentBtn").addEventListener("click", () => {
+        const segments = getRouteSegmentsState();
+        if (segments.length <= 1) return;
+        segments.pop();
+        renderRouteSegments(segments);
+        renderRouteCalc({ markUserResult: true });
+      });
 
-      ["cipFlow", "cipDiameter", "cipRouteLength", "cipTotalK", "cipRho", "cipMu", "cipRoughness", "cipMin", "cipMax", "targetSpeed"]
-        .forEach(id => document.getElementById(id).addEventListener("input", renderCipCalc));
-      ["pumpFlow", "pumpDp", "pumpStaticHead", "pumpReserve", "pumpEfficiency", "pumpRho"]
-        .forEach(id => document.getElementById(id).addEventListener("input", renderPumpCalc));
-      ["routeFlow", "routeDiameter", "routeLength", "routeElbows", "routeValves", "routeTees", "routeOtherK", "routeRho", "routeMu", "routeRoughness"]
-        .forEach(id => document.getElementById(id).addEventListener("input", renderRouteCalc));
+      ["cipDiameter", "cipRouteLength", "cipVolume", "cipMin", "cipMax", "cipTemp", "cipCycles"]
+        .forEach(id => document.getElementById(id).addEventListener("input", () => {
+          saveFormState();
+          renderCipCalc();
+        }));
+      ["routeFlow", "routeRho", "routeMu", "routeRoughness"]
+        .forEach(id => document.getElementById(id).addEventListener("input", () => {
+          saveRouteState();
+          renderRouteCalc({ markUserResult: true });
+        }));
       ["protocolRetention", "protocolCip", "protocolPumps", "protocolRoutes"]
         .forEach(id => document.getElementById(id).addEventListener("change", updateProtocolPreview));
     }
@@ -2333,6 +3178,19 @@
     setupPages();
     bindAutoRecalculation();
     restoreInputsFromSession();
+    bindCipModeToggle();
+    bindOptionalComponentsBadge();
+    bindPumpControls();
+    const routeState = loadRouteState();
+    if (routeState) {
+      routeHasUserResult = Boolean(routeState.feedsPump);
+    }
+    currentRouteMode = localStorage.getItem(ROUTE_MODE_KEY) || routeState?.mode || "process";
+    loadRouteModeInputs(currentRouteMode, routeState);
+    document.querySelectorAll("[data-route-mode]").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.routeMode === currentRouteMode);
+    });
+    renderRouteSegments(routeState?.segments);
     pipeSizeSelect.addEventListener("change", updatePipeIdInfo);
     calcBtn.addEventListener("click", calc);
     exportWordBtn.addEventListener("click", () => exportProtocol("word"));
@@ -2340,6 +3198,10 @@
     resetAllBtn.addEventListener("click", resetAllFields);
     calc();
     renderCipCalc();
+    if (currentPumpMode === "routeProcess" || currentPumpMode === "routeCip") {
+      setRouteMode(currentPumpMode === "routeCip" ? "cip" : "process", { markUserResult: routeHasUserResult });
+    } else {
+      renderRouteCalc({ markUserResult: routeHasUserResult });
+    }
     renderPumpCalc();
-    renderRouteCalc();
     updateProtocolPreview();
