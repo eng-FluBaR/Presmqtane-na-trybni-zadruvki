@@ -445,6 +445,56 @@
         <div class="card">
           <h2>Протоколи</h2>
           <div class="result-group protocol-options">
+            <div class="section-title">Данни за протокола</div>
+            <div class="form-row">
+              <div class="field">
+                <label for="protocolTitle">Заглавие на протокола</label>
+                <input id="protocolTitle" type="text" />
+              </div>
+              <div class="field">
+                <label for="protocolDate">Дата на протокола</label>
+                <input id="protocolDate" type="date" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="protocolLogo">Лого на фирмата</label>
+                <div id="protocolLogoDrop" class="logo-drop-zone" tabindex="0">
+                  <input id="protocolLogo" type="file" accept="image/*" />
+                  <div id="protocolLogoName" class="logo-drop-text">Избери файл или пусни логото тук</div>
+                </div>
+              </div>
+              <div class="field">
+                <label for="protocolNotes">Забележки и особени указания</label>
+                <textarea id="protocolNotes" rows="4" placeholder="Например: допускания, ограничения, източник на данни, специални условия..."></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="protocolAuthorTitle">Титла</label>
+                <select id="protocolAuthorTitle">
+                  <option value="">Без титла</option>
+                  <option value="инж.">Инженер</option>
+                  <option value="маг.">Магистър</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="protocolAuthorSalutation">Обръщение</label>
+                <select id="protocolAuthorSalutation">
+                  <option value="">Без обръщение</option>
+                  <option value="г-н">Господин</option>
+                  <option value="г-жа">Госпожа</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field full-width">
+                <label for="protocolAuthorName">Изготвил проекта</label>
+                <input id="protocolAuthorName" type="text" placeholder="Име и фамилия" />
+              </div>
+            </div>
+          </div>
+          <div class="result-group protocol-options">
             <div class="section-title">Включи в протокола</div>
             <label class="protocol-option">
               <input id="protocolRetention" type="checkbox" checked />

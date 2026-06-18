@@ -178,6 +178,8 @@
     let routeHasUserResult = false;
     let currentPumpMode = "process";
     let currentRouteMode = "process";
+    let protocolLogoFile = null;
+    let protocolTitleUserEdited = false;
 
     function fmt(value, digits = 3) {
       const shownDigits = Math.max(0, Math.min(3, digits));
@@ -201,6 +203,13 @@
       return String(value)
         .replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
     }
@@ -1779,6 +1788,137 @@
       return array;
     }
 
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function imageSize(dataUrl) {
+      return new Promise(resolve => {
+        if (!dataUrl) {
+          resolve(null);
+          return;
+        }
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+      });
+    }
+
+    function fitImageSize(size, maxWidth, maxHeight) {
+      if (!size?.width || !size?.height) return { width: maxWidth, height: maxHeight };
+      const scale = Math.min(maxWidth / size.width, maxHeight / size.height, 1);
+      return {
+        width: Math.round(size.width * scale),
+        height: Math.round(size.height * scale)
+      };
+    }
+
+    async function getProtocolMeta() {
+      const title = document.getElementById("protocolTitle")?.value.trim() || "Протокол за изчисления";
+      const date = document.getElementById("protocolDate")?.value || "";
+      const notes = document.getElementById("protocolNotes")?.value.trim() || "";
+      const authorTitle = document.getElementById("protocolAuthorTitle")?.value || "";
+      const authorSalutation = document.getElementById("protocolAuthorSalutation")?.value || "";
+      const authorName = document.getElementById("protocolAuthorName")?.value.trim() || "";
+      const logoInput = document.getElementById("protocolLogo");
+      const logoFile = protocolLogoFile || logoInput?.files?.[0] || null;
+      const logoDataUrl = await readFileAsDataUrl(logoFile);
+      return {
+        title,
+        date,
+        notes,
+        authorTitle,
+        authorSalutation,
+        authorName,
+        logoName: logoFile?.name || "",
+        logoDataUrl,
+        logoSize: await imageSize(logoDataUrl)
+      };
+    }
+
+    function protocolDefaultTitle() {
+      const pipe = pipeSeries[pipeStandardSelect.value]?.[parseInt(pipeSizeSelect.value, 10)];
+      const dn = pipe?.dn || "DN";
+      const qLs = (parseRouteNumber(document.getElementById("flow")?.value, 0) || 0) / 3600;
+      const retentionS = parseRouteNumber(document.getElementById("retention")?.value, 0);
+      return `Протокол за изчисления - тръбна задръжка ${dn}, Q=${fmt(qLs, 3)} L/s, t=${fmt(retentionS, 0)} s`;
+    }
+
+    function syncProtocolTitle({ force = false } = {}) {
+      const titleInput = document.getElementById("protocolTitle");
+      if (!titleInput) return;
+      const generated = protocolDefaultTitle();
+      const shouldSync = force || !protocolTitleUserEdited || titleInput.dataset.autoTitle === "true" || titleInput.value.trim() === "";
+      if (!shouldSync) return;
+      titleInput.value = generated;
+      titleInput.dataset.autoTitle = "true";
+      protocolTitleUserEdited = false;
+    }
+
+    function updateProtocolLogoName() {
+      const logoName = document.getElementById("protocolLogoName");
+      if (!logoName) return;
+      const file = protocolLogoFile || document.getElementById("protocolLogo")?.files?.[0] || null;
+      logoName.textContent = file ? `Избрано лого: ${file.name}` : "Избери файл или пусни логото тук";
+    }
+
+    function bindProtocolLogoDrop() {
+      const dropZone = document.getElementById("protocolLogoDrop");
+      const logoInput = document.getElementById("protocolLogo");
+      if (!dropZone || !logoInput) return;
+
+      const setLogoFile = file => {
+        if (!file || !file.type.startsWith("image/")) return;
+        protocolLogoFile = file;
+        try {
+          const transfer = new DataTransfer();
+          transfer.items.add(file);
+          logoInput.files = transfer.files;
+        } catch (_err) {
+        }
+        updateProtocolLogoName();
+        updateProtocolPreview();
+      };
+
+      dropZone.addEventListener("click", event => {
+        if (event.target !== logoInput) logoInput.click();
+      });
+      dropZone.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        logoInput.click();
+      });
+      ["dragenter", "dragover"].forEach(type => {
+        dropZone.addEventListener(type, event => {
+          event.preventDefault();
+          dropZone.classList.add("drag-over");
+        });
+      });
+      ["dragleave", "drop"].forEach(type => {
+        dropZone.addEventListener(type, () => dropZone.classList.remove("drag-over"));
+      });
+      dropZone.addEventListener("drop", event => {
+        event.preventDefault();
+        setLogoFile(Array.from(event.dataTransfer?.files || []).find(file => file.type.startsWith("image/")));
+      });
+      logoInput.addEventListener("change", () => {
+        protocolLogoFile = logoInput.files?.[0] || null;
+        updateProtocolLogoName();
+        updateProtocolPreview();
+      });
+      updateProtocolLogoName();
+    }
+
     async function exportWordProtocol(report, fileBase) {
       if (!window.docx) {
         alert("Липсва библиотека за Word експорт.");
@@ -1870,8 +2010,7 @@
             ...chartBlock,
             new Paragraph({ text: "4) Разчетни формули (резюме)", heading: HeadingLevel.HEADING_2 }),
             ...formulaParagraphs,
-            new Paragraph({ text: "" }),
-            new Paragraph({ text: "Бележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт." })
+            new Paragraph({ text: "" })
           ]
         }]
       });
@@ -1928,8 +2067,7 @@
         { text: "\n5) Графика на скорости (CIP)", style: "section" },
         report.chartDataUrl ? { image: report.chartDataUrl, width: 500, margin: [0, 4, 0, 4] } : { text: "Няма налична графика.", style: "td" },
         { text: "\n6) Разчетни формули (резюме)", style: "section" },
-        { ol: formulaList, fontSize: 8.5 },
-        { text: "\nБележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт.", style: "foot" }
+        { ol: formulaList, fontSize: 8.5 }
       ];
 
       const docDefinition = {
@@ -2130,19 +2268,35 @@
     function updateProtocolPreview() {
       const box = document.getElementById("protocolPreview");
       if (!box) return;
+      syncProtocolTitle();
       const sections = selectedProtocolSections();
+      const title = document.getElementById("protocolTitle")?.value.trim() || "Протокол за изчисления";
+      const date = document.getElementById("protocolDate")?.value || "няма зададена дата";
+      const logoName = protocolLogoFile?.name || document.getElementById("protocolLogo")?.files?.[0]?.name || "няма избрано лого";
+      const notes = document.getElementById("protocolNotes")?.value.trim();
+      const authorTitle = document.getElementById("protocolAuthorTitle")?.value || "";
+      const authorSalutation = document.getElementById("protocolAuthorSalutation")?.value || "";
+      const authorName = document.getElementById("protocolAuthorName")?.value.trim();
+      const authorLine = [authorTitle, authorSalutation, authorName].filter(Boolean).join(" ") || "няма зададен изготвил";
+      const header = [
+        `<div class="formula"><strong>${escapeHtml(title)}</strong></div>`,
+        `<div class="formula">Дата: ${escapeHtml(date)} | Лого: ${escapeHtml(logoName)}</div>`,
+        `<div class="formula">Изготвил: ${escapeHtml(authorLine)}</div>`,
+        notes ? `<div class="formula">Забележки: ${escapeHtml(notes)}</div>` : ""
+      ].join("");
       box.innerHTML = sections.length
-        ? sections.map(section => `<div class="formula">${section.title}: ${section.rows.length} реда, ${section.formulas?.length || 0} формули</div>`).join("")
-        : `<div class="formula">Няма избрана сметка за протокол.</div>`;
+        ? header + sections.map(section => `<div class="formula">${section.title}: ${section.rows.length} реда, ${section.formulas?.length || 0} формули</div>`).join("")
+        : header + `<div class="formula">Няма избрана сметка за протокол.</div>`;
     }
 
-    function buildSelectedProtocol() {
+    async function buildSelectedProtocol() {
       const sections = selectedProtocolSections();
       if (!sections.length) {
         alert("Избери поне една сметка за протокола.");
         return null;
       }
-      return { date: new Date().toLocaleString("bg-BG"), sections };
+      const meta = await getProtocolMeta();
+      return { ...meta, sections };
     }
 
     function protocolTableRows(section) {
@@ -2154,12 +2308,22 @@
         alert("Липсва библиотека за Word експорт.");
         return;
       }
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
-      const children = [
-        new Paragraph({ text: "ПРОТОКОЛ ЗА ИЗЧИСЛЕНИЯ", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.LEFT }),
-        new Paragraph({ text: `Дата: ${bundle.date}` }),
-        new Paragraph({ text: "" })
-      ];
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } = window.docx;
+      const children = [];
+      if (bundle.logoDataUrl) {
+        const logoFit = fitImageSize(bundle.logoSize, 150, 80);
+        children.push(new Paragraph({
+          children: [
+            new ImageRun({
+              data: dataUrlToUint8Array(bundle.logoDataUrl),
+              transformation: logoFit
+            })
+          ]
+        }));
+      }
+      children.push(new Paragraph({ text: bundle.title, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.LEFT }));
+      if (bundle.date) children.push(new Paragraph({ text: `Дата: ${bundle.date}` }));
+      children.push(new Paragraph({ text: "" }));
       bundle.sections.forEach((section, index) => {
         children.push(new Paragraph({ text: `${index + 1}) ${section.title}`, heading: HeadingLevel.HEADING_2 }));
         children.push(new Table({
@@ -2185,7 +2349,20 @@
         }
         children.push(new Paragraph({ text: "" }));
       });
-      children.push(new Paragraph({ text: "Бележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт." }));
+      if (bundle.notes) {
+        children.push(new Paragraph({ text: "Забележки и особени указания", heading: HeadingLevel.HEADING_2 }));
+        bundle.notes.split(/\r?\n/).filter(Boolean).forEach(line => {
+          children.push(new Paragraph({ text: line }));
+        });
+        children.push(new Paragraph({ text: "" }));
+      }
+      if (bundle.authorName) {
+        const author = [bundle.authorTitle, bundle.authorSalutation, bundle.authorName].filter(Boolean).join(" ");
+        children.push(new Paragraph({ text: "Изготвил проекта", heading: HeadingLevel.HEADING_2 }));
+        children.push(new Paragraph({ text: author }));
+        children.push(new Paragraph({ text: "" }));
+        children.push(new Paragraph({ text: "Подпис: ______________________________" }));
+      }
       const doc = new Document({ sections: [{ properties: {}, children }] });
       const blob = await Packer.toBlob(doc);
       downloadBlob(blob, `${fileBase}.docx`);
@@ -2196,10 +2373,13 @@
         alert("Липсва библиотека за PDF експорт.");
         return;
       }
-      const content = [
-        { text: "ПРОТОКОЛ ЗА ИЗЧИСЛЕНИЯ", style: "header" },
-        { text: `Дата: ${bundle.date}`, style: "subheader" }
-      ];
+      const content = [];
+      if (bundle.logoDataUrl) {
+        const logoFit = fitImageSize(bundle.logoSize, 150, 80);
+        content.push({ image: bundle.logoDataUrl, width: logoFit.width, height: logoFit.height, margin: [0, 0, 0, 8] });
+      }
+      content.push({ text: bundle.title, style: "header" });
+      if (bundle.date) content.push({ text: `Дата: ${bundle.date}`, style: "subheader" });
       bundle.sections.forEach((section, index) => {
         content.push({ text: `\n${index + 1}) ${section.title}`, style: "section" });
         content.push({
@@ -2225,7 +2405,16 @@
           });
         }
       });
-      content.push({ text: "\nБележка: Протоколът е за предварително оразмеряване. Финалният проект се валидира с пълна схема и фирмен стандарт.", style: "foot" });
+      if (bundle.notes) {
+        content.push({ text: "\nЗабележки и особени указания", style: "section" });
+        content.push({ text: bundle.notes, style: "td" });
+      }
+      if (bundle.authorName) {
+        const author = [bundle.authorTitle, bundle.authorSalutation, bundle.authorName].filter(Boolean).join(" ");
+        content.push({ text: "\nИзготвил проекта", style: "section" });
+        content.push({ text: author, style: "td" });
+        content.push({ text: "Подпис: ______________________________", margin: [0, 16, 0, 0] });
+      }
       window.pdfMake.createPdf({
         pageSize: "A4",
         pageMargins: [28, 28, 28, 28],
@@ -2245,9 +2434,10 @@
 
     async function exportProtocol(format) {
       updateProtocolPreview();
-      const bundle = buildSelectedProtocol();
+      const bundle = await buildSelectedProtocol();
       if (!bundle) return;
-      const fileBase = `protokol_izchislenia_${new Date().toISOString().slice(0, 10)}`;
+      const fileDate = bundle.date || new Date().toISOString().slice(0, 10);
+      const fileBase = `protokol_izchislenia_${fileDate}`;
 
       if (format === "word") {
         await exportSelectedWordProtocol(bundle, fileBase);
@@ -2693,6 +2883,8 @@
       if ((currentPumpMode === "process" && isPumpLinked("process")) || (currentPumpMode === "cip" && isPumpLinked("cip"))) {
         renderPumpCalc();
       }
+      syncProtocolTitle();
+      updateProtocolPreview();
     }
 
     function metric(k, v, cls = "", tone = "") {
@@ -3296,8 +3488,16 @@
           saveRouteState();
           renderRouteCalc({ markUserResult: true });
         }));
-      ["protocolRetention", "protocolCip", "protocolPumps", "protocolRoutes"]
+      ["protocolRetention", "protocolCip", "protocolPumps", "protocolRoutes", "protocolTitle", "protocolDate", "protocolLogo", "protocolNotes", "protocolAuthorTitle", "protocolAuthorSalutation", "protocolAuthorName"]
         .forEach(id => document.getElementById(id).addEventListener("change", updateProtocolPreview));
+      document.getElementById("protocolTitle")?.addEventListener("input", () => {
+        protocolTitleUserEdited = document.getElementById("protocolTitle").value.trim() !== protocolDefaultTitle();
+        document.getElementById("protocolTitle").dataset.autoTitle = protocolTitleUserEdited ? "false" : "true";
+        updateProtocolPreview();
+      });
+      ["protocolDate", "protocolNotes", "protocolAuthorName"]
+        .forEach(id => document.getElementById(id).addEventListener("input", updateProtocolPreview));
+      bindProtocolLogoDrop();
     }
 
     function bindAutoRecalculation() {

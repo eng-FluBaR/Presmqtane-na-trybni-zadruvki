@@ -239,7 +239,7 @@
       font-weight: 600;
     }
 
-    input, select {
+    input, select, textarea {
       width: 100%;
       padding: 10px 11px;
       border: 1px solid var(--border);
@@ -247,9 +247,15 @@
       font-size: 14px;
       color: var(--text);
       background: #fff;
+      font-family: inherit;
     }
 
-    input:focus, select:focus {
+    textarea {
+      resize: vertical;
+      min-height: 92px;
+    }
+
+    input:focus, select:focus, textarea:focus {
       outline: 2px solid var(--accent-soft);
       border-color: var(--accent);
     }
@@ -258,6 +264,28 @@
       color: #516070;
       background: #f3f6fb;
       cursor: not-allowed;
+    }
+
+    .logo-drop-zone {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed #9fb3cc;
+      border-radius: 9px;
+      background: #f8fbff;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .logo-drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #eef6ff;
+    }
+
+    .logo-drop-text {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .mode-toggle {
