@@ -184,6 +184,10 @@
       return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: shownDigits }) : "—";
     }
 
+    function fmtPrecise(value, digits = 6) {
+      return Number.isFinite(value) ? value.toLocaleString("bg-BG", { maximumFractionDigits: digits }) : "—";
+    }
+
     function formatInputValue(id, value) {
       const numeric = typeof value === "number" ? value : parseFloat(value);
       if (!Number.isFinite(numeric)) return value;
@@ -648,9 +652,15 @@
         dnIndex: 3,
         length: 10,
         elbows90: 2,
+        elbow90Zeta: 0.60,
         elbows45: 0,
+        elbow45Zeta: 0.35,
         teeThrough: 0,
+        teeThroughZeta: 0.30,
         teeBranch: 0,
+        teeBranchZeta: 0.70,
+        plateHxSections: [],
+        optionsOpen: false,
         expansionZeta: "",
         contractionZeta: "",
         components
@@ -680,6 +690,30 @@
       }).join("");
     }
 
+    function normalizePlateHxSections(segment) {
+      if (Array.isArray(segment.plateHxSections)) {
+        return segment.plateHxSections.map((section, idx) => ({
+          plates: section?.plates ?? "",
+          zeta: parseRouteNumber(section?.zeta, idx === 0 ? 2.00 : 0)
+        }));
+      }
+      const count = Math.max(0, Math.round(parseRouteNumber(segment.plateHxSections, 0)));
+      const zeta = parseRouteNumber(segment.plateHxSectionZeta, 2.00);
+      return Array.from({ length: count }, () => ({ plates: "", zeta }));
+    }
+
+    function routePlateHxRows(segment, segmentIndex) {
+      const sections = normalizePlateHxSections(segment);
+      if (!sections.length) {
+        return `<div class="component-label">Няма добавени секции</div><div class="component-label">-</div><div class="component-label">-</div>`;
+      }
+      return sections.map((section, sectionIndex) => `
+        <div class="component-label">Секция ${sectionIndex + 1}</div>
+        <input class="route-plate-hx-plates" data-section-index="${sectionIndex}" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", section.plates ?? ""))}" aria-label="Пластинчат топлообменик секция ${sectionIndex + 1} брой пластини" />
+        <input class="route-plate-hx-zeta" data-section-index="${sectionIndex}" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", section.zeta ?? 0))}" aria-label="Пластинчат топлообменик секция ${sectionIndex + 1} ζ" />
+      `).join("");
+    }
+
     function routeSegmentHtml(segment, index) {
       return `
         <div class="route-segment" data-route-index="${index}">
@@ -699,26 +733,46 @@
           </div>
           <div class="form-row">
             <div class="field">
-              <label>90° elbows DIN 11852 (ζ=0.60)</label>
+              <label>90° колена DIN 11852 - брой</label>
               <input class="route-elbows90" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.elbows90))}" />
             </div>
             <div class="field">
-              <label>45° elbows DIN 11852 (ζ=0.35)</label>
-              <input class="route-elbows45" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.elbows45))}" />
+              <label>ζ за 1 коляно 90° [-]</label>
+              <input class="route-elbow90-zeta" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", segment.elbow90Zeta ?? 0.60))}" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label>T-pieces flow-through (ζ=0.30)</label>
+              <label>45° колена DIN 11852 - брой</label>
+              <input class="route-elbows45" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.elbows45))}" />
+            </div>
+            <div class="field">
+              <label>ζ за 1 коляно 45° [-]</label>
+              <input class="route-elbow45-zeta" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", segment.elbow45Zeta ?? 0.35))}" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Тройници прав поток - брой</label>
               <input class="route-tee-through" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.teeThrough))}" />
             </div>
             <div class="field">
-              <label>T-pieces flow-branch (ζ=0.70)</label>
-              <input class="route-tee-branch" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.teeBranch))}" />
+              <label>ζ за 1 тройник прав поток [-]</label>
+              <input class="route-tee-through-zeta" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", segment.teeThroughZeta ?? 0.30))}" />
             </div>
           </div>
-          <details>
-            <summary>Valve / fitting library</summary>
+          <div class="form-row">
+            <div class="field">
+              <label>Тройници отклонение - брой</label>
+              <input class="route-tee-branch" type="number" min="0" step="1" value="${escapeAttr(formatInputValue("", segment.teeBranch))}" />
+            </div>
+            <div class="field">
+              <label>ζ за 1 тройник отклонение [-]</label>
+              <input class="route-tee-branch-zeta" type="number" min="0" step="0.01" value="${escapeAttr(formatInputValue("", segment.teeBranchZeta ?? 0.70))}" />
+            </div>
+          </div>
+          <details${segment.optionsOpen ? " open" : ""}>
+            <summary>Опционални съпротивления: арматура, фитинги, пластинчат топлообменик</summary>
             <div class="component-grid">
               <div class="component-label">Компонент</div>
               <div class="component-label">Брой</div>
@@ -731,9 +785,24 @@
               <input type="number" min="0" step="1" value="1" readonly />
               <input class="route-contraction-zeta" type="number" min="0" step="0.01" value="${escapeAttr(segment.contractionZeta === undefined || segment.contractionZeta === "" ? "" : formatInputValue("", segment.contractionZeta))}" aria-label="Sudden contraction ζ override" />
             </div>
+            <div class="component-grid plate-hx-grid">
+              <div class="component-label">Пластинчат топлообменик</div>
+              <div class="component-label">Брой пластини</div>
+              <div class="component-label">ζ секция</div>
+              ${routePlateHxRows(segment, index)}
+            </div>
+            <div class="button-row secondary">
+              <button class="ghost route-add-plate-hx-section" type="button" data-route-index="${index}">Добави секция</button>
+              <button class="ghost route-remove-plate-hx-section" type="button" data-route-index="${index}">Премахни секция</button>
+            </div>
           </details>
         </div>
       `;
+    }
+
+    function parseRouteNumber(value, fallback = 0) {
+      const numeric = parseFloat(value);
+      return Number.isFinite(numeric) ? numeric : fallback;
     }
 
     function getRouteSegmentsState() {
@@ -743,17 +812,31 @@
           const countEl = segmentEl.querySelector(`.route-component-count[data-component="${component.key}"]`);
           const zetaEl = segmentEl.querySelector(`.route-component-zeta[data-component="${component.key}"]`);
           components[component.key] = {
-            count: parseFloat(countEl?.value) || 0,
-            zeta: parseFloat(zetaEl?.value) || component.zeta
+            count: parseRouteNumber(countEl?.value, 0),
+            zeta: parseRouteNumber(zetaEl?.value, component.zeta)
+          };
+        });
+        const plateHxSections = Array.from(segmentEl.querySelectorAll(".route-plate-hx-zeta")).map(zetaEl => {
+          const sectionIndex = zetaEl.dataset.sectionIndex;
+          const platesEl = segmentEl.querySelector(`.route-plate-hx-plates[data-section-index="${sectionIndex}"]`);
+          return {
+            plates: platesEl?.value ?? "",
+            zeta: parseRouteNumber(zetaEl.value, 0)
           };
         });
         return {
           dnIndex: parseInt(segmentEl.querySelector(".route-dn")?.value, 10) || 0,
-          length: parseFloat(segmentEl.querySelector(".route-length")?.value) || 0,
-          elbows90: parseFloat(segmentEl.querySelector(".route-elbows90")?.value) || 0,
-          elbows45: parseFloat(segmentEl.querySelector(".route-elbows45")?.value) || 0,
-          teeThrough: parseFloat(segmentEl.querySelector(".route-tee-through")?.value) || 0,
-          teeBranch: parseFloat(segmentEl.querySelector(".route-tee-branch")?.value) || 0,
+          length: parseRouteNumber(segmentEl.querySelector(".route-length")?.value, 0),
+          elbows90: parseRouteNumber(segmentEl.querySelector(".route-elbows90")?.value, 0),
+          elbow90Zeta: parseRouteNumber(segmentEl.querySelector(".route-elbow90-zeta")?.value, 0.60),
+          elbows45: parseRouteNumber(segmentEl.querySelector(".route-elbows45")?.value, 0),
+          elbow45Zeta: parseRouteNumber(segmentEl.querySelector(".route-elbow45-zeta")?.value, 0.35),
+          teeThrough: parseRouteNumber(segmentEl.querySelector(".route-tee-through")?.value, 0),
+          teeThroughZeta: parseRouteNumber(segmentEl.querySelector(".route-tee-through-zeta")?.value, 0.30),
+          teeBranch: parseRouteNumber(segmentEl.querySelector(".route-tee-branch")?.value, 0),
+          teeBranchZeta: parseRouteNumber(segmentEl.querySelector(".route-tee-branch-zeta")?.value, 0.70),
+          plateHxSections,
+          optionsOpen: Boolean(segmentEl.querySelector("details")?.open),
           expansionZeta: segmentEl.querySelector(".route-expansion-zeta")?.value ?? "",
           contractionZeta: segmentEl.querySelector(".route-contraction-zeta")?.value ?? "",
           components
@@ -840,6 +923,30 @@
           renderRouteCalc({ markUserResult: true });
         });
       });
+      target.querySelectorAll(".route-add-plate-hx-section").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const segmentsState = getRouteSegmentsState();
+          const segmentIndex = parseInt(btn.dataset.routeIndex, 10);
+          if (!segmentsState[segmentIndex]) return;
+          segmentsState[segmentIndex].plateHxSections.push({ plates: "", zeta: 0 });
+          segmentsState[segmentIndex].optionsOpen = true;
+          renderRouteSegments(segmentsState);
+          saveRouteState();
+          renderRouteCalc({ markUserResult: true });
+        });
+      });
+      target.querySelectorAll(".route-remove-plate-hx-section").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const segmentsState = getRouteSegmentsState();
+          const segmentIndex = parseInt(btn.dataset.routeIndex, 10);
+          if (!segmentsState[segmentIndex]?.plateHxSections.length) return;
+          segmentsState[segmentIndex].plateHxSections.pop();
+          segmentsState[segmentIndex].optionsOpen = true;
+          renderRouteSegments(segmentsState);
+          saveRouteState();
+          renderRouteCalc({ markUserResult: true });
+        });
+      });
     }
 
     function frictionFactorTurbulent(re, eps, d) {
@@ -877,12 +984,14 @@
       const inletOutletExtensionM = Number.isFinite(inputs.inletOutletExtensionM) && inputs.inletOutletExtensionM >= 0 ? inputs.inletOutletExtensionM : 0.15;
       const elbowArcLength = (Math.PI / 2) * elbowGeometry.radiusM;
       const bendRadiusM = elbowGeometry.radiusM;
+      const inletOutletElbows90 = 2;
       let nStraights = 1;
-      while ((nStraights * straightSegment) + (Math.max(0, nStraights - 1) * 2 * elbowArcLength) < length) {
+      while ((nStraights * straightSegment) + ((Math.max(0, nStraights - 1) * 2) + inletOutletElbows90) * elbowArcLength < length) {
         nStraights += 1;
       }
       const nUTurns = Math.max(0, nStraights - 1);
-      const elbows90 = nUTurns * 2;
+      const serpentineElbows90 = nUTurns * 2;
+      const elbows90 = serpentineElbows90 + inletOutletElbows90;
       const sectorLength = straightSegment + (2 * elbowArcLength);
       const sectorCount = nUTurns;
       const totalElbowArcLength = elbows90 * elbowArcLength;
@@ -940,7 +1049,7 @@
         elbowRadiusIsTabular: elbowGeometry.isTabular, inletOutletExtensionM, inletOutletLengthM,
         bendRadiusM, coilPitchM, overallWidthM, overallHeightM, sideDepthM,
         totalElbowArcLength, straightLengthTotal, lastStraightLength, maxStraightLength,
-        elbows90, re, f, kElbowsOnly, kIO, k11852, k11851, k32676, kExtras, kTotal, leqElbows, leqIO, leqExtras, lHydraulicTotal,
+        elbows90, serpentineElbows90, inletOutletElbows90, re, f, kElbowsOnly, kIO, k11852, k11851, k32676, kExtras, kTotal, leqElbows, leqIO, leqExtras, lHydraulicTotal,
         dyn, dpLinear, dpElbows, dpIO, dpExtras, dpLocal, dpTotal,
         dpLinearBar: dpLinear / 100000,
         dpLocalBar: dpLocal / 100000,
@@ -1550,7 +1659,7 @@
           "Геометрия на колената",
           geometryFormula,
           geometrySubstitution,
-          `nколена = 2 · (${report.nStraights} - 1) = ${report.elbows90}; общо в колена = ${fmt(report.totalElbowArcLength_m, 3)} m`
+          `nколена = вътрешни 2 · (${report.nStraights} - 1) + вход/изход ${report.inletOutletElbows90} = ${report.serpentineElbows90} + ${report.inletOutletElbows90} = ${report.elbows90}; общо в колена = ${fmt(report.totalElbowArcLength_m, 3)} m`
         ),
         formulaBlock(
           "Скорост",
@@ -1599,6 +1708,7 @@
         ["Обем на тръбата", `${fmt(report.volumePerMeter_l_m,3)} L/m`],
         ["Обща дължина", `${fmt(report.length_m,2)} m`],
         ["Брой колена 90°", `${report.elbows90}`],
+        ["Дължина на 1 коляно", `${fmt(report.elbowArcLength_m,3)} m`],
         ["Работна помпа", `${fmt(report.workPumpFlow_m3_h,3)} m³/h | H=${fmt(report.workPumpHead_m,2)} m | P≈${fmt(report.workPumpPower_kW,3)} kW`],
         ["Общи загуби", `${fmt(report.dpTotal_bar,4)} bar`],
         ["Скорост", `${fmt(report.velocity_m_s,3)} m/s`]
@@ -1624,6 +1734,8 @@
         ["Обща дължина", `${fmt(report.length_m,2)} m`],
         ["Хидравлична дължина Lобщо", `${fmt(report.lHydraulicTotal_m,3)} m`],
         ["Брой колена 90°", `${report.elbows90}`],
+        ["Разбивка колена", `вътрешни=${report.serpentineElbows90}; вход/изход=${report.inletOutletElbows90}`],
+        ["Дължина на 1 коляно", `${fmt(report.elbowArcLength_m,3)} m`],
         ["Вход/изход геометрична дължина", `${fmt(report.inletOutletLength_m,3)} m`],
         ["Работна помпа - дебит", `${fmt(report.workPumpFlow_m3_h,3)} m³/h`],
         ["Работна помпа - напор", `${fmt(report.workPumpHead_m,2)} m`],
@@ -2250,6 +2362,8 @@
         q_l_h,
         q_l_s,
         rho,
+        area: main.area,
+        volume: main.volume,
         volume_l: main.volume_l,
         volumePerMeter_l_m: main.volumePerMeter_l_m,
         retention_s_l: main.retention_s_l,
@@ -2271,10 +2385,13 @@
         overallHeightM: main.overallHeightM,
         sideDepthM: main.sideDepthM,
         elbows90: main.elbows90,
+        serpentineElbows90: main.serpentineElbows90,
+        inletOutletElbows90: main.inletOutletElbows90,
         kTotal: main.kTotal,
         kExtras: main.kExtras,
         method: lossMethod,
         velocity: main.velocity,
+        dyn: main.dyn,
         re: main.re,
         f: main.f,
         dpLinear: main.dpLinear,
@@ -2323,6 +2440,8 @@
         inletOutletLengthM: main.inletOutletLengthM,
         kElbow,
         elbows90: main.elbows90,
+        serpentineElbows90: main.serpentineElbows90,
+        inletOutletElbows90: main.inletOutletElbows90,
         sectorCount: main.sectorCount,
         sectorLength: main.sectorLength,
         nStraights: main.nStraights,
@@ -2435,6 +2554,8 @@
           re: main.re,
           f: main.f,
           elbows90: main.elbows90,
+          serpentineElbows90: main.serpentineElbows90,
+          inletOutletElbows90: main.inletOutletElbows90,
           kElbowsOnly: main.kElbowsOnly,
           kIO: main.kIO,
           k11852: main.k11852,
@@ -2507,6 +2628,8 @@
         totalElbowArcLength_m: main.totalElbowArcLength,
         straightLengthTotal_m: main.straightLengthTotal,
         elbows90: main.elbows90,
+        serpentineElbows90: main.serpentineElbows90,
+        inletOutletElbows90: main.inletOutletElbows90,
         velocity_m_s: main.velocity,
         dynamicPa: main.dyn,
         re: main.re,
@@ -2590,60 +2713,59 @@
       const details = document.getElementById("detailMetrics");
       const cipCheckPanel = document.getElementById("cipCheckPanel");
       const workPump = pumpEstimate(r.q, r.dpTotal, r.rho);
-      const cipCheck = buildCipCheck(r.d, r.cipMin);
 
       primary.innerHTML = [
-        metric("Обем на тръбата [L/m]", fmt(r.volumePerMeter_l_m, 3)),
-        metric("Дебит [L/s]", fmt(r.q_l_s, 3)),
-        metric("Общ обем на серпентината [L]", fmt(r.volume_l, 2)),
-        metric("Обща дължина на тръбната задръжка [m]", fmt(r.length, 2))
+        metric("Дебит на продукта Q [L/s]", fmt(r.q_l_s, 3)),
+        metric("Общ обем на серпентината V [L]", fmt(r.volume_l, 2)),
+        metric("Обем на тръбната задръжка V₁m [L/m]", fmt(r.volumePerMeter_l_m, 3)),
+        metric("Обща дължина на тръбната задръжка L [m]", fmt(r.length, 2))
       ].join("");
 
       secondary.innerHTML = [
-        metric("Брой колена 90°", r.elbows90.toString(), "small"),
-        metric("Дължина прав участък [m]", fmt(r.segment, 3), "small"),
-        metric("Дължина на сектор [m]", fmt(r.sectorLength, 3), "small"),
-        metric("Дължина вход-изход [m]", fmt(r.inletOutletLengthM, 3), "small"),
-        metric("Скорост на потока [m/s]", fmt(r.velocity, 3), "small", velocityTone(r.velocity)),
-        metric("Съпротивление Δp [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
-        metric("CIP статус", cipCheck.verdict, "small", cipCheck.verdictTone)
+        metric("Брой колена 90° n общо", r.elbows90.toString(), "small"),
+        metric("Дължина на 1 коляно Lколяно [m]", fmt(r.elbowArcLength, 3), "small"),
+        metric("Дължина прав участък Lправа [m]", fmt(r.segment, 3), "small"),
+        metric("Дължина на сектор Lсектор [m]", fmt(r.sectorLength, 3), "small"),
+        metric("Брой сектори nсектори [-]", r.sectorCount.toString(), "small"),
+        metric("Дължина начален-краен сектор Lвх/изх [m]", fmt(r.inletOutletLengthM, 3), "small"),
+        metric("Съпротивление в задръжката Δp [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
+        metric("Скорост на потока v [m/s]", fmt(r.velocity, 3), "small", velocityTone(r.velocity))
       ].join("");
 
-      cipCheckPanel.innerHTML = [
-        metric("Re_CIP [-]", fmt(cipCheck.re, 0), "small", cipCheck.regimeTone),
-        metric("Режим на потока", cipCheck.regime, "small", cipCheck.regimeTone),
-        metric("CIP статус", cipCheck.verdict, "small", cipCheck.verdictTone),
-        metric("Минимален дебит за CIP [L/h]", fmt(cipCheck.qMinLh, 0), "small", velocityTone(r.cipMin)),
-        `<div class="cip-check-note">Фиксирани референтни свойства за CIP при 65°C: ρ = ${fmt(cipCheck.rho, 0)} kg/m³, μ = ${fmt(cipCheck.mu, 6)} Pa·s. Проверка с вътрешен диаметър ID ${fmt(r.d_mm, 1)} mm и v_CIP_min ${fmt(r.cipMin, 3)} m/s.</div>`
-      ].join("");
+      if (cipCheckPanel) cipCheckPanel.innerHTML = "";
 
       details.innerHTML = [
-        metric("Дебит на продукта [L/h]", fmt(r.q_l_h, 0), "small"),
+        metric("Дебит Q [L/s]", fmt(r.q_l_s, 3), "small"),
+        metric("Обем V [m³]", fmt(r.volume, 6), "small"),
         metric("Задръжка t/V [s/L]", fmt(r.retention_s_l, 3), "small"),
-        metric("Светъл отвор ID [mm]", fmt(r.d_mm, 1), "small"),
+        metric("Светъл отвор Dᵢ / ID [mm]", fmt(r.d_mm, 1), "small"),
+        metric("Площ на сечение A [m²]", fmtPrecise(r.area, 6), "small"),
         metric("Метод", r.method === "leq" ? "Leq" : "ζ", "small"),
-        metric("Работна помпа дебит [m³/h]", fmt(r.q_l_h / 1000, 3), "small"),
-        metric("Работна помпа напор [m]", fmt(workPump.head, 2), "small"),
-        metric("Работна помпа мощност [kW]", fmt(workPump.shaftPower / 1000, 3), "small"),
-        metric("Работна помпа Δp [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
-        metric("Работна помпа резерв", `${fmt(workPump.reserve * 100, 0)} %`, "small"),
-        metric("Работна помпа КПД", `${fmt(workPump.efficiency * 100, 0)} %`, "small"),
-        metric("Дължина на 1 коляно [m]", fmt(r.elbowArcLength, 3), "small"),
-        metric("Радиус на коляно", `${fmt(r.bendRadiusM * 1000, 1)} mm / R/D=${fmt(r.elbowRadiusD, 2)}${r.elbowRadiusIsTabular ? " табл." : ""}`, "small"),
-        metric("Удължение вход/изход [m]", fmt(r.inletOutletExtensionM, 3), "small"),
-        metric("Общо дължина в колена [m]", fmt(r.totalElbowArcLength, 3), "small"),
-        metric("Права дължина общо [m]", fmt(r.straightLengthTotal, 3), "small"),
-        metric("Габарит ширина [mm]", fmt(r.overallWidthM * 1000, 0), "small"),
-        metric("Габарит височина [mm]", fmt(r.overallHeightM * 1000, 0), "small"),
+        metric("Дължина на 1 коляно Lколяно [m]", fmt(r.elbowArcLength, 3), "small"),
+        metric("Разбивка колена n", `вътрешни ${r.serpentineElbows90} + вход/изход ${r.inletOutletElbows90}`, "small"),
+        metric("Радиус на коляно R", `${fmt(r.bendRadiusM * 1000, 1)} mm / R/D=${fmt(r.elbowRadiusD, 2)}${r.elbowRadiusIsTabular ? " табл." : ""}`, "small"),
+        metric("Удължение вход/изход Lудълж. [m]", fmt(r.inletOutletExtensionM, 3), "small"),
+        metric("Общо дължина в колена ΣLколена [m]", fmt(r.totalElbowArcLength, 3), "small"),
+        metric("Права дължина общо Lправи [m]", fmt(r.straightLengthTotal, 3), "small"),
+        metric("Габарит ширина B [mm]", fmt(r.overallWidthM * 1000, 0), "small"),
+        metric("Габарит височина H [mm]", fmt(r.overallHeightM * 1000, 0), "small"),
         metric("Дълбочина U [mm]", fmt(r.sideDepthM * 1000, 0), "small"),
-        metric("Общо съпротивление ΣK [-]", fmt(r.kTotal, 2), "small", r.kTone),
         metric("Re [-]", fmt(r.re, 0), "small"),
         metric("λ / f [-]", fmt(r.f, 4), "small"),
+        metric("Динамично налягане ρv²/2 [Pa]", fmt(r.dyn, 2), "small"),
+        metric("Общо съпротивление ΣK [-]", fmt(r.kTotal, 2), "small", r.kTone),
         metric("Δp линейни [kPa]", fmt(r.dpLinear / 1000, 2), "small"),
         metric("Δp колена [kPa]", fmt(r.dpElbows / 1000, 2), "small"),
+        metric("Δp вход/изход [kPa]", fmt(r.dpIO / 1000, 2), "small"),
+        metric("Δp допълнителни [kPa]", fmt(r.dpExtras / 1000, 2), "small"),
         metric("Δp локални [kPa]", fmt(r.dpLocal / 1000, 2), "small"),
         metric("Δp общ [kPa]", fmt(r.dpTotal / 1000, 2), "small"),
         metric("Δp общ [bar]", fmt(r.dpTotalBar, 4), "small", pressureTone(r.dpTotalBar)),
+        metric("Работна помпа дебит Q [m³/h]", fmt(r.q_l_h / 1000, 3), "small"),
+        metric("Работна помпа напор H [m]", fmt(workPump.head, 2), "small"),
+        metric("Работна помпа мощност P [kW]", fmt(workPump.shaftPower / 1000, 3), "small"),
+        metric("Работна помпа резерв", `${fmt(workPump.reserve * 100, 0)} %`, "small"),
+        metric("Работна помпа КПД", `${fmt(workPump.efficiency * 100, 0)} %`, "small"),
         metric("ε диапазон", r.epsTone === "ok" ? "В диапазон" : r.epsTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.epsTone),
         metric("(L/D) диапазон", r.leqTone === "ok" ? "В диапазон" : r.leqTone === "warn" ? "Близо до граница" : "Извън диапазон", "small", r.leqTone)
       ].join("");
@@ -2666,7 +2788,7 @@
         formulaLine(`4) Необходим обем за задръжка:\nV = Q·t = ${fmt(x.q, 6)}·${fmt(x.t, 1)} = ${fmt(x.volume, 6)} m³`),
         formulaLine(`5) Обем на тръбата за 1 метър:\nV₁m = A·1m = ${fmt(x.area, 6)} m³/m = ${fmt(x.volumePerMeter_l_m, 3)} L/m`),
         formulaLine(`6) Обща дължина на тръбната задръжка:\nL = V/A = ${fmt(x.volume, 6)} / ${fmt(x.area, 6)} = ${fmt(x.length, 3)} m`),
-        formulaLine(`7) Геометрия на серпентината и брой колена:\nLколяно = π/2·R/D·D = π/2·${fmt(x.elbowRadiusD, 2)}·${fmt(x.d, 4)} = ${fmt(x.elbowArcLength, 4)} m\nИзбрани прави секции = ${x.nStraights}; колена 90° = 2·(${x.nStraights} - 1) = ${x.elbows90}; сектори = ${x.sectorCount}\nLправи = Lобщо - Lколена = ${fmt(x.length, 3)} - ${fmt(x.totalElbowArcLength, 3)} = ${fmt(x.straightLengthTotal, 3)} m\nLвход/изход = Lправа секция + Lколяно + Lудължение = ${fmt(x.segment, 3)} + ${fmt(x.elbowArcLength, 3)} + ${fmt(x.inletOutletExtensionM, 3)} = ${fmt(x.inletOutletLengthM, 3)} m`),
+        formulaLine(`7) Геометрия на серпентината и брой колена:\nLколяно = π/2·R/D·D = π/2·${fmt(x.elbowRadiusD, 2)}·${fmt(x.d, 4)} = ${fmt(x.elbowArcLength, 4)} m\nИзбрани прави секции = ${x.nStraights}; вътрешни колена = 2·(${x.nStraights} - 1) = ${x.serpentineElbows90}; вход/изход колена = ${x.inletOutletElbows90}; общо колена 90° = ${x.elbows90}; сектори = ${x.sectorCount}\nLправи = Lобщо - Lколена = ${fmt(x.length, 3)} - ${fmt(x.totalElbowArcLength, 3)} = ${fmt(x.straightLengthTotal, 3)} m\nLвход/изход = Lправа секция + Lколяно + Lудължение = ${fmt(x.segment, 3)} + ${fmt(x.elbowArcLength, 3)} + ${fmt(x.inletOutletExtensionM, 3)} = ${fmt(x.inletOutletLengthM, 3)} m`),
         formulaLine(`8) Уделна задръжка:\nt/V = ${fmt(x.t, 2)} / ${fmt(x.volume_l, 3)} = ${fmt(x.retention_s_l, 3)} s/L`),
         formulaLine(`9) Скорост:\nv = Q/A = ${fmt(x.q, 6)} / ${fmt(x.area, 6)} = ${fmt(x.velocity, 4)} m/s`),
         formulaLine(`10) Reynolds:\nRe = ρ·v·D/μ = ${fmt(x.rho, 1)}·${fmt(x.velocity, 4)}·${fmt(x.d, 4)} / ${fmt(x.mu, 6)} = ${fmt(x.re, 0)}`),
@@ -2748,17 +2870,17 @@
 
       document.getElementById("cipMetrics").innerHTML = [
         metric("CIP статус", verdict.label, "", verdict.tone),
-        metric("CIP min [m/s]", fmt(minV, 3), "small", velocityTone(minV)),
-        metric("CIP max [m/s]", fmt(maxV, 3), "small", velocityTone(maxV)),
-        metric("Минимален дебит за CIP [L/h]", fmt(qMinLh, 0), "small", velocityTone(minV)),
+        metric("CIP min v_min [m/s]", fmt(minV, 3), "small", velocityTone(minV)),
+        metric("CIP max v_max [m/s]", fmt(maxV, 3), "small", velocityTone(maxV)),
+        metric("Минимален дебит за CIP Q_CIP,min [L/h]", fmt(qMinLh, 0), "small", velocityTone(minV)),
         metric("Re_CIP [-]", fmt(re, 0), "small", cipRegimeTone(re)),
         metric("Режим", cipRegimeText(re), "small", cipRegimeTone(re)),
         metric("λ Colebrook [-]", fmt(lambda, 5), "small"),
         metric("Δp триене [bar]", fmt(dpFriction / 100000, 4), "small", pressureTone(dpFriction / 100000)),
         metric("Δp локални [bar]", fmt(dpLocal / 100000, 4), "small", pressureTone(dpLocal / 100000)),
         metric("Δp общо [bar]", fmt(dpTotal / 100000, 4), "small", pressureTone(dpTotal / 100000)),
-        metric("t за 1 обем [s]", fmt(flushTime, 1), "small"),
-        metric("t общо цикли [s]", fmt(totalFlushTime, 1), "small"),
+        metric("t за 1 обем t₁ [s]", fmt(flushTime, 1), "small"),
+        metric("t общо цикли tобщо [s]", fmt(totalFlushTime, 1), "small"),
         metric("ρ / μ", `${fmt(props.rho, 1)} kg/m³ / ${fmt(props.mu, 6)} Pa·s`, "small")
       ].join("");
 
@@ -3046,7 +3168,12 @@
         const velocity = area > 0 ? q / area : 0;
         const re = muPaS > 0 ? (rho * velocity * d) / muPaS : 0;
         const lambda = colebrookWhite(re, eps / 1000, d);
-        let zeta = (segment.elbows90 * 0.60) + (segment.elbows45 * 0.35) + (segment.teeThrough * 0.30) + (segment.teeBranch * 0.70);
+        let zeta =
+          (segment.elbows90 * parseRouteNumber(segment.elbow90Zeta, 0.60)) +
+          (segment.elbows45 * parseRouteNumber(segment.elbow45Zeta, 0.35)) +
+          (segment.teeThrough * parseRouteNumber(segment.teeThroughZeta, 0.30)) +
+          (segment.teeBranch * parseRouteNumber(segment.teeBranchZeta, 0.70)) +
+          normalizePlateHxSections(segment).reduce((sum, section) => sum + parseRouteNumber(section.zeta, 0), 0);
         routeComponentLibrary.forEach(component => {
           const item = segment.components?.[component.key];
           zeta += (item?.count || 0) * (item?.zeta ?? component.zeta);
@@ -3090,7 +3217,7 @@
       document.getElementById("routeMetrics").innerHTML = [
         metric("Режим", currentRouteMode === "cip" ? "CIP" : "Работа", "small"),
         metric("Общ пад Δp [bar]", fmt(totalDpBar, 4), "", pressureTone(totalDpBar)),
-        metric("Обща дължина [m]", fmt(totalLength, 2), "small"),
+        metric("Обща дължина L [m]", fmt(totalLength, 2), "small"),
         metric("Общо Σζ [-]", fmt(totalK, 2), "small"),
         metric("Брой сегменти", rows.length.toString(), "small")
       ].join("");
@@ -3117,7 +3244,7 @@
         </tr>`;
 
       document.getElementById("routeNote").textContent =
-        `Трасето използва DN от EN 10357 Series A, λ по Colebrook-White и локални ζ по библиотеката. Текущият режим е ${currentRouteMode === "cip" ? "CIP" : "работен"} и се подава към съответния режим за помпа като отделна сметка.`;
+        `Трасето използва DN от EN 10357 Series A, λ по Colebrook-White и локални ζ по въведените стойности. В допълнителните полета можеш да добавяш секции на пластинчат топлообменик, всяка със собствен брой пластини и собствено ζ. Текущият режим е ${currentRouteMode === "cip" ? "CIP" : "работен"} и се подава към съответния режим за помпа като отделна сметка.`;
       saveRouteState();
       if (markUserResult && (
         (currentPumpMode === "routeProcess" && currentRouteMode === "process" && isPumpLinked("routeProcess")) ||
